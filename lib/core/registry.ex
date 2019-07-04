@@ -5,6 +5,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   require Logger
 
   alias Telemetry.Metrics
+  alias TelemetryMetricsPrometheus.Core
   alias TelemetryMetricsPrometheus.Core.{Counter, Distribution, LastValue, Sum}
 
   @type name :: atom()
