@@ -26,6 +26,8 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     aggregates_table_id = create_table(name, :set)
     dist_table_id = create_table(String.to_atom("#{name}_dist"), :duplicate_bag)
 
+    send(self(), {:setup, opts})
+
     {:ok,
      %{
        config: %{aggregates_table_id: aggregates_table_id, dist_table_id: dist_table_id},
@@ -95,6 +97,22 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     GenServer.call(name, :get_metrics)
   end
 
+  @impl true
+  def handle_info({:setup, opts}, state) do
+    metrics = Keyword.get(opts, :metrics, [])
+    registered = register_metrics(metrics, opts[:validations], state.config)
+
+    if opts[:monitor_reporter] do
+      monitor_tables([state.config.aggregates_table_id, state.config.dist_table_id], opts[:name])
+    end
+
+    {:noreply, %{state | metrics: registered}}
+  end
+
+  def handle_info(_, state) do
+    {:noreply, state}
+  end
+
   def handle_call(:get_config, _from, state) do
     {:reply, state.config, state}
   end
@@ -108,47 +126,11 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   @spec handle_call({:register, Core.metric()}, GenServer.from(), map()) ::
           {:reply, :ok, map()}
           | {:reply, metric_exists_error() | unsupported_metric_type_error(), map()}
-
-  def handle_call({:register, %Metrics.Counter{} = metric}, _from, state) do
-    with {:ok, handler_id} <- Counter.register(metric, state.config.aggregates_table_id, self()) do
-      {:reply, :ok, %{state | metrics: [{metric, handler_id} | state.metrics]}}
-    else
-      {:error, :already_exists} -> {:reply, {:error, :already_exists, metric.name}, state}
+  def handle_call({:register, metric}, _from, state) do
+    case register_metric(metric, state.config) do
+      {:ok, metric} -> {:reply, :ok, %{state | metrics: [metric | state.metrics]}}
+      other -> {:reply, other, state}
     end
-  end
-
-  def handle_call({:register, %Metrics.LastValue{} = metric}, _from, state) do
-    with {:ok, handler_id} <- LastValue.register(metric, state.config.aggregates_table_id, self()) do
-      {:reply, :ok, %{state | metrics: [{metric, handler_id} | state.metrics]}}
-    else
-      {:error, :already_exists} -> {:reply, {:error, :already_exists, metric.name}, state}
-    end
-  end
-
-  def handle_call({:register, %Metrics.Sum{} = metric}, _from, state) do
-    with {:ok, handler_id} <- Sum.register(metric, state.config.aggregates_table_id, self()) do
-      {:reply, :ok, %{state | metrics: [{metric, handler_id} | state.metrics]}}
-    else
-      {:error, :already_exists} -> {:reply, {:error, :already_exists, metric.name}, state}
-    end
-  end
-
-  def handle_call({:register, %Metrics.Distribution{} = metric}, _from, state) do
-    with {:ok, handler_id} <- Distribution.register(metric, state.config.dist_table_id, self()) do
-      {:reply, :ok,
-       %{
-         state
-         | metrics: [
-             {%{metric | buckets: metric.buckets ++ ["+Inf"]}, handler_id} | state.metrics
-           ]
-       }}
-    else
-      {:error, :already_exists} -> {:reply, {:error, :already_exists, metric.name}, state}
-    end
-  end
-
-  def handle_call({:register, %Metrics.Summary{} = _metric}, _from, state) do
-    {:reply, {:error, :unsupported_metric_type, :summary}, state}
   end
 
   @spec create_table(name :: atom, type :: atom) :: :ets.tid() | atom
@@ -165,5 +147,69 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
       {:telemetry_poller,
        [measurements: measurement_specs, name: String.to_atom("#{name}_poller")]}
     )
+  end
+
+  @spec register_metrics(
+          TelemetryMetricsPrometheus.Core.metrics(),
+          validation_opts(),
+          %{}
+        ) :: :ok
+  defp register_metrics(metrics, validations, config) do
+    metrics
+    |> validate_units(validations)
+    |> Enum.reduce([], fn metric, acc ->
+      case register_metric(metric, config) do
+        {:ok, metric} ->
+          [metric | acc]
+
+        {:error, :already_exists, metric_name} ->
+          Logger.warn(
+            "Metric name already exists. Dropping measure. metric_name:=#{inspect(metric_name)}"
+          )
+
+          acc
+
+        {:error, :unsupported_metric_type, metric_type} ->
+          Logger.warn(
+            "Metric type #{metric_type} is unsupported. Dropping measure. metric_name:=#{
+              inspect(metric.name)
+            }"
+          )
+
+          acc
+      end
+    end)
+  end
+
+  defp register_metric(%Metrics.Counter{} = metric, config) do
+    case Counter.register(metric, config.aggregates_table_id, self()) do
+      {:ok, handler_id} -> {:ok, {metric, handler_id}}
+      {:error, :already_exists} -> {:error, :already_exists, metric.name}
+    end
+  end
+
+  defp register_metric(%Metrics.LastValue{} = metric, config) do
+    case LastValue.register(metric, config.aggregates_table_id, self()) do
+      {:ok, handler_id} -> {:ok, {metric, handler_id}}
+      {:error, :already_exists} -> {:error, :already_exists, metric.name}
+    end
+  end
+
+  defp register_metric(%Metrics.Sum{} = metric, config) do
+    case Sum.register(metric, config.aggregates_table_id, self()) do
+      {:ok, handler_id} -> {:ok, {metric, handler_id}}
+      {:error, :already_exists} -> {:error, :already_exists, metric.name}
+    end
+  end
+
+  defp register_metric(%Metrics.Distribution{} = metric, config) do
+    case Distribution.register(metric, config.dist_table_id, self()) do
+      {:ok, handler_id} -> {:ok, {%{metric | buckets: metric.buckets ++ ["+Inf"]}, handler_id}}
+      {:error, :already_exists} -> {:error, :already_exists, metric.name}
+    end
+  end
+
+  defp register_metric(%Metrics.Summary{}, _config) do
+    {:error, :unsupported_metric_type, :summary}
   end
 end

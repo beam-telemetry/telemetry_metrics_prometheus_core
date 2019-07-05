@@ -2,19 +2,19 @@ defmodule TelemetryMetricsPrometheus.Core do
   @moduledoc """
   Prometheus Reporter for [`Telemetry.Metrics`](https://github.com/beam-telemetry/telemetry_metrics) definitions.
 
-  Provide a list of metric definitions to the `init/2` function. It's recommended to
-  initialize the reporter during application startup.
+  Provide a list of metric definitions to the `child_spec/1` function. It's recommended to
+  add this to your supervision tree.
 
       def start(_type, _args) do
-        TelemetryMetricsPrometheus.Core.init([
-          counter("http.request.count"),
-          sum("http.request.payload_size", unit: :byte),
-          last_value("vm.memory.total", unit: :byte)
-        ])
-
         # List all child processes to be supervised
         children = [
-        ...
+          {TelemetryMetricsPrometheus.Core, [
+            metrics: [
+              counter("http.request.count"),
+              sum("http.request.payload_size", unit: :byte),
+              last_value("vm.memory.total", unit: :byte)
+            ]
+          ]}
         ]
 
         opts = [strategy: :one_for_one, name: ExampleApp.Supervisor]
@@ -103,7 +103,7 @@ defmodule TelemetryMetricsPrometheus.Core do
   """
 
   alias Telemetry.Metrics
-  alias TelemetryMetricsPrometheus.Core.{Aggregator, Exporter, Registry, Router}
+  alias TelemetryMetricsPrometheus.Core.{Aggregator, Exporter, Registry}
 
   require Logger
 
@@ -124,34 +124,61 @@ defmodule TelemetryMetricsPrometheus.Core do
           | {:validations, Registry.validation_opts() | false}
 
   @doc """
-  Initializes a reporter instance with the provided `Telemetry.Metrics` definitions.
+  Reporter's child spec.
+
+  This function allows you to start the reporter under a supervisor like this:
+
+  children = [
+    {TelemetryMetricsPrometheus.Core, options}
+  ]
+
+  See `init/1` for a list of available options.
 
   Available options:
   * `:name` - name of the reporter instance. Defaults to `:prometheus_metrics`
   * `:monitor_reporter` - collects metrics on the reporter's ETS table usage. Defaults to `false`
   * `:validations` - Keyword options list to control validations. All validations can be disabled by setting `validations: false`.
-    * `:consistent_units` - logs a warning when mixed time units are found in your definitions. Defaults to `true`
-    * `:require_seconds` - logs a warning if units other than seconds are found in your definitions. Defaults to `true`
+  * `:consistent_units` - logs a warning when mixed time units are found in your definitions. Defaults to `true`
+  * `:require_seconds` - logs a warning if units other than seconds are found in your definitions. Defaults to `true`
+  * `:metrics` - a list of metrics to track.
   """
+  @spec child_spec(prometheus_options()) :: Supervisor.child_spec()
+  def child_spec(options) do
+    opts = ensure_options(options)
+    opts = add_internal_metrics(opts)
+    TelemetryMetricsPrometheus.Core.Registry.child_spec(opts)
+  end
+
+  @doc """
+  Start the `TelemetryMetricsPrometheus.Core.Supervisor`
+
+  See `child_spec/1` for options.
+  """
+  @spec start_link(prometheus_options()) :: GenServer.on_start()
+  def start_link(options) do
+    opts = ensure_options(options)
+    opts = add_internal_metrics(opts)
+    TelemetryMetricsPrometheus.Core.Registry.start_link(opts)
+  end
+
+  @doc """
+  Initializes a reporter instance with the provided `Telemetry.Metrics` definitions.
+
+  See `child_spec/1` for options.
+  """
+  @deprecated "Use TelemetryMetricsPrometheus.Core.child_spec/1 or start_link/1 instead"
   @spec init(metrics(), prometheus_options()) :: :ok
   def init(metrics, options \\ []) when is_list(metrics) and is_list(options) do
-    with opts <- ensure_options(options),
-         {:ok, _registry} <- init_registry(opts),
-         :ok <- register_metrics(internal_metrics(), opts[:name], opts[:validations]),
-         :ok <- register_metrics(metrics, opts[:name], opts[:validations]),
-         config <- Registry.config(opts[:name]) do
-      if opts[:monitor_reporter] do
-        {:ok, _poller_id} =
-          Registry.monitor_tables([config.aggregates_table_id, config.dist_table_id], opts[:name])
-      end
+    options = Keyword.put_new(options, :metrics, metrics)
 
+    with opts <- ensure_options(options),
+         {:ok, _registry} <- start_link(opts) do
       :ok
     end
   end
 
   @doc false
   def stop(_name) do
-    # Stop everything for now. This can be refined later.
     DynamicSupervisor.which_children(__MODULE__.DynamicSupervisor)
     |> Enum.map(fn {:undefined, pid, _, _} ->
       DynamicSupervisor.terminate_child(__MODULE__.DynamicSupervisor, pid)
@@ -205,38 +232,6 @@ defmodule TelemetryMetricsPrometheus.Core do
       require_seconds: on
     ]
 
-  @spec init_registry(keyword()) :: DynamicSupervisor.on_start_child()
-  defp init_registry(opts) do
-    DynamicSupervisor.start_child(__MODULE__.DynamicSupervisor, %{
-      id: opts[:name],
-      start: {Registry, :start_link, [opts]}
-    })
-  end
-
-  @spec register_metrics(metrics(), atom(), Registry.validation_opts()) :: :ok
-  defp register_metrics(metrics, name, validations) do
-    metrics
-    |> Registry.validate_units(validations)
-    |> Enum.each(fn metric ->
-      case Registry.register(metric, name) do
-        :ok ->
-          metric
-
-        {:error, :already_exists, metric_name} ->
-          Logger.warn(
-            "Metric name already exists. Dropping measure. metric_name:=#{inspect(metric_name)}"
-          )
-
-        {:error, :unsupported_metric_type, metric_type} ->
-          Logger.warn(
-            "Metric type #{metric_type} is unsupported. Dropping measure. metric_name:=#{
-              inspect(metric.name)
-            }"
-          )
-      end
-    end)
-  end
-
   @spec internal_metrics() :: metrics()
   defp internal_metrics(),
     do: [
@@ -274,4 +269,12 @@ defmodule TelemetryMetricsPrometheus.Core do
         unit: :byte
       )
     ]
+
+  defp add_internal_metrics(opts) do
+    metrics = Keyword.get(opts, :metrics, [])
+    case Keyword.get(opts, :monitor_reporter) do
+      true -> Keyword.put(opts, :metrics, metrics ++ internal_metrics())
+      _ -> opts
+    end
+  end
 end
