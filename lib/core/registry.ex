@@ -17,6 +17,11 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   # name - https://prometheus.io/docs/instrumenting/writing_exporters/#naming
 
   def start_link(opts) do
+    case Keyword.get(opts, :metrics) do
+      nil -> raise "no :metrics key defined in options"
+      _ -> :ok
+    end
+
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 

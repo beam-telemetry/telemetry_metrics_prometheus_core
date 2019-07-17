@@ -15,7 +15,7 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
       Metrics.summary("http.request.duration")
     ]
 
-    opts = [name: :test]
+    opts = [name: :test, metrics: []]
 
     %{definitions: definitions, opts: opts}
   end
@@ -35,6 +35,10 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
     end)
 
     cleanup()
+  end
+
+  test "errors if metrics aren't set" do
+    assert {:error, _} = start_supervised({Registry, [name: :test]})
   end
 
   test "returns an error for duplicate events", %{definitions: definitions, opts: opts} do
