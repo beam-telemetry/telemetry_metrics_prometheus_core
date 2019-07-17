@@ -138,15 +138,19 @@ defmodule TelemetryMetricsPrometheus.Core do
   * `:name` - name of the reporter instance. Defaults to `:prometheus_metrics`
   * `:monitor_reporter` - collects metrics on the reporter's ETS table usage. Defaults to `false`
   * `:validations` - Keyword options list to control validations. All validations can be disabled by setting `validations: false`.
-  * `:consistent_units` - logs a warning when mixed time units are found in your definitions. Defaults to `true`
-  * `:require_seconds` - logs a warning if units other than seconds are found in your definitions. Defaults to `true`
+    * `:consistent_units` - logs a warning when mixed time units are found in your definitions. Defaults to `true`
+    * `:require_seconds` - logs a warning if units other than seconds are found in your definitions. Defaults to `true`
   * `:metrics` - a list of metrics to track.
   """
   @spec child_spec(prometheus_options()) :: Supervisor.child_spec()
   def child_spec(options) do
     opts = ensure_options(options)
     opts = add_internal_metrics(opts)
-    TelemetryMetricsPrometheus.Core.Registry.child_spec(opts)
+    spec = %{
+      id: opts[:name],
+      start: {Registry, :start_link, [opts]}
+    }
+    Supervisor.child_spec(spec, [])
   end
 
   @doc """
@@ -158,7 +162,7 @@ defmodule TelemetryMetricsPrometheus.Core do
   def start_link(options) do
     opts = ensure_options(options)
     opts = add_internal_metrics(opts)
-    TelemetryMetricsPrometheus.Core.Registry.start_link(opts)
+    Registry.start_link(opts)
   end
 
   @doc """
@@ -271,7 +275,7 @@ defmodule TelemetryMetricsPrometheus.Core do
     ]
 
   defp add_internal_metrics(opts) do
-    metrics = Keyword.get(opts, :metrics, [])
+    metrics = Keyword.fetch!(opts, :metrics)
     case Keyword.get(opts, :monitor_reporter) do
       true -> Keyword.put(opts, :metrics, metrics ++ internal_metrics())
       _ -> opts

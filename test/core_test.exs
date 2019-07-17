@@ -2,12 +2,27 @@ defmodule CoreTest do
   use ExUnit.Case
   import ExUnit.CaptureLog
 
-  import TelemetryMetricsPrometheus.Core, only: [init: 2, scrape: 1, stop: 1]
+  import TelemetryMetricsPrometheus.Core, only: [start_link: 1, scrape: 1, stop: 1]
   alias Telemetry.Metrics
 
   test "has a child spec" do
-    assert %{id: TelemetryMetricsPrometheus.Core.Registry} =
-             TelemetryMetricsPrometheus.Core.child_spec([])
+    child_spec = TelemetryMetricsPrometheus.Core.child_spec([metrics: []])
+
+    assert child_spec == %{
+      id: :prometheus_metrics,
+      start: {TelemetryMetricsPrometheus.Core.Registry, :start_link,
+              [
+                [
+                  validations: [consistent_units: true, require_seconds: true],
+                  name: :prometheus_metrics,
+                  monitor_reporter: false,
+                  metrics: []
+                ]
+              ]}
+    }
+
+    assert %{id: :my_metrics} =
+      TelemetryMetricsPrometheus.Core.child_spec([name: :my_metrics, metrics: []])
   end
 
   test "initializes properly" do
@@ -33,8 +48,6 @@ defmodule CoreTest do
     metrics_scrape = scrape(:test_reporter)
 
     assert metrics_scrape =~ "http_request_total"
-
-    stop(:test_reporter)
   end
 
   test "logs an error for duplicate metric types" do
@@ -47,8 +60,6 @@ defmodule CoreTest do
              opts = [name: :test_reporter, validations: false]
              :ok = init_and_wait(metrics, opts)
            end) =~ "Metric name already exists"
-
-    stop(:test_reporter)
   end
 
   test "logs an error for unsupported metric types" do
@@ -60,8 +71,6 @@ defmodule CoreTest do
              opts = [name: :test_reporter, validations: false]
              :ok = init_and_wait(metrics, opts)
            end) =~ "Metric type summary is unsupported."
-
-    stop(:test_reporter)
   end
 
   test "supports monitoring the health of the reporter itself" do
@@ -97,8 +106,8 @@ defmodule CoreTest do
   end
 
   defp init_and_wait(metrics, opts) do
-    :ok = init(metrics, opts)
-    TelemetryMetricsPrometheus.Core.Registry.config(:test_reporter)
+    {:ok, pid} = start_link(Keyword.put(opts, :metrics, metrics))
+    _ = :sys.get_state(pid)
     :ok
   end
 end
