@@ -143,19 +143,15 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     :ets.new(name, [:named_table, :public, type, {:write_concurrency, true}])
   end
 
-  @spec monitor_tables([atom()], atom()) :: DynamicSupervisor.on_start_child()
+  @spec monitor_tables([atom()], atom()) :: Supervisor.on_start()
   def monitor_tables(tables, name) do
     measurement_specs = Enum.map(tables, &{Core.Telemetry, :dispatch_table_stats, [&1]})
 
-    DynamicSupervisor.start_child(
-      TelemetryMetricsPrometheus.Core.DynamicSupervisor,
-      {:telemetry_poller,
-       [measurements: measurement_specs, name: String.to_atom("#{name}_poller")]}
-    )
+    Core.ReporterSupervisor.start_link(name: name, measurements: measurement_specs)
   end
 
   @spec register_metrics(
-          TelemetryMetricsPrometheus.Core.metrics(),
+          Core.metrics(),
           validation_opts(),
           %{}
         ) :: :ok

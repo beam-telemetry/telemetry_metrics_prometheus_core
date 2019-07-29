@@ -24,7 +24,7 @@ defmodule TelemetryMetricsPrometheus.Core do
   Note that aggregations for distributions (histogram) only occur at scrape time.
   These aggregations only have to process events that have occurred since the last
   scrape, so it's recommended at this time to keep an eye on scrape durations if
-  you're reporting a large number of disributions or you have a high tag cardinality.
+  you're reporting a large number of distributions or you have a high tag cardinality.
 
   ## Telemetry.Metrics to Prometheus Equivalents
 
@@ -132,61 +132,47 @@ defmodule TelemetryMetricsPrometheus.Core do
     {TelemetryMetricsPrometheus.Core, options}
   ]
 
-  See `init/1` for a list of available options.
-
-  Available options:
-  * `:name` - name of the reporter instance. Defaults to `:prometheus_metrics`
-  * `:monitor_reporter` - collects metrics on the reporter's ETS table usage. Defaults to `false`
-  * `:validations` - Keyword options list to control validations. All validations can be disabled by setting `validations: false`.
-    * `:consistent_units` - logs a warning when mixed time units are found in your definitions. Defaults to `true`
-    * `:require_seconds` - logs a warning if units other than seconds are found in your definitions. Defaults to `true`
-  * `:metrics` - a list of metrics to track.
+  See `start_child/1` for options.
   """
   @spec child_spec(prometheus_options()) :: Supervisor.child_spec()
   def child_spec(options) do
-    opts = ensure_options(options)
-    opts = add_internal_metrics(opts)
+    opts =
+      ensure_options(options)
+      |> add_internal_metrics()
+
+    id =
+      case Keyword.get(opts, :name, :prometheus_metrics) do
+        name when is_atom(name) -> name
+        {:global, name} -> name
+        {:via, _, name} -> name
+      end
+
     spec = %{
-      id: opts[:name],
+      id: id,
       start: {Registry, :start_link, [opts]}
     }
+
     Supervisor.child_spec(spec, [])
   end
 
   @doc """
   Start the `TelemetryMetricsPrometheus.Core.Supervisor`
 
-  See `child_spec/1` for options.
+  Available options:
+  * `:name` - name of the reporter instance. Defaults to `:prometheus_metrics`
+  * `:monitor_reporter` - collects metrics on the reporter's ETS table usage. Defaults to `false`
+  * `:validations` - Keyword options list to control validations. All validations can be disabled by setting `validations: false`.
+  * `:consistent_units` - logs a warning when mixed time units are found in your definitions. Defaults to `true`
+  * `:require_seconds` - logs a warning if units other than seconds are found in your definitions. Defaults to `true`
+  * `:metrics` - a list of metrics to track.
   """
   @spec start_link(prometheus_options()) :: GenServer.on_start()
   def start_link(options) do
-    opts = ensure_options(options)
-    opts = add_internal_metrics(opts)
+    opts =
+      ensure_options(options)
+      |> add_internal_metrics()
+
     Registry.start_link(opts)
-  end
-
-  @doc """
-  Initializes a reporter instance with the provided `Telemetry.Metrics` definitions.
-
-  See `child_spec/1` for options.
-  """
-  @deprecated "Use TelemetryMetricsPrometheus.Core.child_spec/1 or start_link/1 instead"
-  @spec init(metrics(), prometheus_options()) :: :ok
-  def init(metrics, options \\ []) when is_list(metrics) and is_list(options) do
-    options = Keyword.put_new(options, :metrics, metrics)
-
-    with opts <- ensure_options(options),
-         {:ok, _registry} <- start_link(opts) do
-      :ok
-    end
-  end
-
-  @doc false
-  def stop(_name) do
-    DynamicSupervisor.which_children(__MODULE__.DynamicSupervisor)
-    |> Enum.map(fn {:undefined, pid, _, _} ->
-      DynamicSupervisor.terminate_child(__MODULE__.DynamicSupervisor, pid)
-    end)
   end
 
   @doc """
@@ -276,6 +262,7 @@ defmodule TelemetryMetricsPrometheus.Core do
 
   defp add_internal_metrics(opts) do
     metrics = Keyword.fetch!(opts, :metrics)
+
     case Keyword.get(opts, :monitor_reporter) do
       true -> Keyword.put(opts, :metrics, metrics ++ internal_metrics())
       _ -> opts
