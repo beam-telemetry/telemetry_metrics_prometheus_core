@@ -24,7 +24,9 @@ defmodule CoreTest do
 
     assert %{id: :my_metrics} = Core.child_spec(name: :my_metrics, metrics: [])
     assert %{id: :global_metrics} = Core.child_spec(name: {:global, :global_metrics}, metrics: [])
-    assert %{id: :via_metrics} = Core.child_spec(name: {:via, :example, :via_metrics}, metrics: [])
+
+    assert %{id: :via_metrics} =
+             Core.child_spec(name: {:via, :example, :via_metrics}, metrics: [])
   end
 
   test "initializes properly" do
@@ -38,6 +40,38 @@ defmodule CoreTest do
 
     opts = [name: :test_reporter, validations: [require_seconds: false]]
     :ok = init_and_wait(metrics, opts)
+
+    assert :ets.info(:test_reporter) != :undefined
+    assert :ets.info(:test_reporter_dist) != :undefined
+
+    :telemetry.execute([:http, :request, :stop], %{duration: 300_000_000}, %{
+      method: "get",
+      code: 200
+    })
+
+    metrics_scrape = Core.scrape(:test_reporter)
+
+    assert metrics_scrape =~ "http_request_total"
+  end
+
+  test "initializes properly via start_link" do
+    metrics = [
+      Metrics.counter("http.request.total",
+        event_name: [:http, :request, :stop],
+        tags: [:method, :code],
+        description: "The total number of HTTP requests."
+      )
+    ]
+
+    opts = [name: :test_reporter, validations: [require_seconds: false]]
+
+    _pid =
+      start_supervised!(%{
+        id: :test_reporter,
+        start: {Core, :start_link, [Keyword.put(opts, :metrics, metrics)]}
+      })
+
+    Process.sleep(100)
 
     assert :ets.info(:test_reporter) != :undefined
     assert :ets.info(:test_reporter_dist) != :undefined

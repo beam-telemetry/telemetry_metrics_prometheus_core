@@ -5,7 +5,13 @@ defmodule TelemetryMetricsPrometheus.Core.TelemetryTest do
 
   test "table stats are dispatched" do
     _pid = start_supervised!({Core.Registry, [metrics: [], monitor_reporter: true]})
-    :telemetry.attach("test_handler", [:telemetry_metrics_prometheus, :table, :status], &echo_event/4, %{caller: self()})
+
+    :telemetry.attach(
+      "test_handler",
+      [:telemetry_metrics_prometheus, :table, :status],
+      &echo_event/4,
+      %{caller: self()}
+    )
 
     Process.sleep(100)
 
