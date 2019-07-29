@@ -23,6 +23,8 @@ defmodule CoreTest do
            }
 
     assert %{id: :my_metrics} = Core.child_spec(name: :my_metrics, metrics: [])
+    assert %{id: :global_metrics} = Core.child_spec(name: {:global, :global_metrics}, metrics: [])
+    assert %{id: :via_metrics} = Core.child_spec(name: {:via, :example, :via_metrics}, metrics: [])
   end
 
   test "initializes properly" do
