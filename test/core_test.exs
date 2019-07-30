@@ -2,27 +2,31 @@ defmodule CoreTest do
   use ExUnit.Case
   import ExUnit.CaptureLog
 
-  import TelemetryMetricsPrometheus.Core, only: [start_link: 1, scrape: 1, stop: 1]
   alias Telemetry.Metrics
+  alias TelemetryMetricsPrometheus.Core
 
   test "has a child spec" do
-    child_spec = TelemetryMetricsPrometheus.Core.child_spec([metrics: []])
+    child_spec = Core.child_spec(metrics: [])
 
     assert child_spec == %{
-      id: :prometheus_metrics,
-      start: {TelemetryMetricsPrometheus.Core.Registry, :start_link,
-              [
+             id: :prometheus_metrics,
+             start:
+               {Core.Registry, :start_link,
                 [
-                  validations: [consistent_units: true, require_seconds: true],
-                  name: :prometheus_metrics,
-                  monitor_reporter: false,
-                  metrics: []
-                ]
-              ]}
-    }
+                  [
+                    validations: [consistent_units: true, require_seconds: true],
+                    name: :prometheus_metrics,
+                    monitor_reporter: false,
+                    metrics: []
+                  ]
+                ]}
+           }
 
-    assert %{id: :my_metrics} =
-      TelemetryMetricsPrometheus.Core.child_spec([name: :my_metrics, metrics: []])
+    assert %{id: :my_metrics} = Core.child_spec(name: :my_metrics, metrics: [])
+    assert %{id: :global_metrics} = Core.child_spec(name: {:global, :global_metrics}, metrics: [])
+
+    assert %{id: :via_metrics} =
+             Core.child_spec(name: {:via, :example, :via_metrics}, metrics: [])
   end
 
   test "initializes properly" do
@@ -45,7 +49,39 @@ defmodule CoreTest do
       code: 200
     })
 
-    metrics_scrape = scrape(:test_reporter)
+    metrics_scrape = Core.scrape(:test_reporter)
+
+    assert metrics_scrape =~ "http_request_total"
+  end
+
+  test "initializes properly via start_link" do
+    metrics = [
+      Metrics.counter("http.request.total",
+        event_name: [:http, :request, :stop],
+        tags: [:method, :code],
+        description: "The total number of HTTP requests."
+      )
+    ]
+
+    opts = [name: :test_reporter, validations: [require_seconds: false]]
+
+    _pid =
+      start_supervised!(%{
+        id: :test_reporter,
+        start: {Core, :start_link, [Keyword.put(opts, :metrics, metrics)]}
+      })
+
+    Process.sleep(100)
+
+    assert :ets.info(:test_reporter) != :undefined
+    assert :ets.info(:test_reporter_dist) != :undefined
+
+    :telemetry.execute([:http, :request, :stop], %{duration: 300_000_000}, %{
+      method: "get",
+      code: 200
+    })
+
+    metrics_scrape = Core.scrape(:test_reporter)
 
     assert metrics_scrape =~ "http_request_total"
   end
@@ -75,24 +111,20 @@ defmodule CoreTest do
 
   test "supports monitoring the health of the reporter itself" do
     :ok = init_and_wait([], name: :test_reporter, monitor_reporter: true, validations: false)
-    children = DynamicSupervisor.which_children(TelemetryMetricsPrometheus.Core.DynamicSupervisor)
+    children = Supervisor.which_children(Core.ReporterSupervisor)
 
     assert Enum.any?(children, &match?({_, _, :worker, [:telemetry_poller]}, &1))
-    stop(:test_reporter)
   end
 
   test "reporter health monitoring is off by default" do
-    :ok = init_and_wait([], name: :test_reporter, validations: false)
-    TelemetryMetricsPrometheus.Core.Registry.config(:test_reporter)
-    children = DynamicSupervisor.which_children(TelemetryMetricsPrometheus.Core.DynamicSupervisor)
+    :ok = init_and_wait([], name: :test_reporter, monitor_reporter: false, validations: false)
 
-    refute Enum.any?(children, &match?({_, _, :worker, [:telemetry_poller]}, &1))
-    stop(:test_reporter)
+    assert is_nil(Process.whereis(Core.ReporterSupervisor))
   end
 
   test "doesn't interfere with other telemetry_poller instances by default" do
     :ok = init_and_wait([], name: :test_reporter, validations: false, monitor_reporter: true)
-    children = DynamicSupervisor.which_children(TelemetryMetricsPrometheus.Core.DynamicSupervisor)
+    children = Supervisor.which_children(Core.ReporterSupervisor)
 
     assert Enum.any?(children, &match?({_, _, :worker, [:telemetry_poller]}, &1))
 
@@ -102,11 +134,10 @@ defmodule CoreTest do
       )
 
     assert elem(result, 0) == :ok
-    stop(:test_reporter)
   end
 
   defp init_and_wait(metrics, opts) do
-    {:ok, pid} = start_link(Keyword.put(opts, :metrics, metrics))
+    pid = start_supervised!({Core, Keyword.put(opts, :metrics, metrics)})
     _ = :sys.get_state(pid)
     :ok
   end

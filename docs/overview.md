@@ -2,7 +2,7 @@
 
 TelemetryMetricsPrometheus.Core is a [Telemetry.Metrics Reporter](https://hexdocs.pm/telemetry_metrics/overview.html#reporters) for aggregating and exposing [Prometheus](https://prometheus.io) metrics based on `Telemetry.Metrics` definitions. 
 
-The reporter runs as a standalone application but does not include a web server to expose
+The reporter runs as a supervised process but does not include a web server to expose
 your metrics. [TelemetryMetricsPrometheus](https://github.com/bryannaegele/telemetry_metrics_prometheus) provides an out of the box
 solution with an included web server.
 
@@ -14,26 +14,32 @@ your application startup.
 
 ```elixir
 def start(_type, _args) do
-  TelemetryMetricsPrometheus.Core.init([])
-  
   # List all child processes to be supervised
   children = [
+    {TelemetryMetricsPrometheus.Core, [metrics: metrics()]}
     ...
   ]
 
   opts = [strategy: :one_for_one, name: ExampleApp.Supervisor]
   Supervisor.start_link(children, opts)
 end
+
+defp metrics, do:
+  [
+    counter("http.request.count"),
+    sum("http.request.payload_size", unit: :byte),
+    last_value("vm.memory.total", unit: :byte)
+  ]
+
 ```
 
 There are a few metrics built into `TelemetryMetricsPrometheus.Core` to 
 monitor resource usage by the reporter and measure scrape processing time.
 
 To see it in action, fire up your application in your terminal `iex -S mix`.
-Open another terminal and curl the endpoint a few times to see the output.
 
 ```
- $ curl http://localhost:9568/metrics
+> TelemetryMetricsPrometheus.Core.scrape()
 # HELP prometheus_metrics_table_size_total A gauge of the key count of a prometheus metrics aggregation table
 # TYPE prometheus_metrics_table_size_total gauge
 prometheus_metrics_table_size_total{name="prometheus_metrics_dist"} 1
@@ -55,12 +61,6 @@ prometheus_metrics_scrape_duration_seconds_bucket{name="prometheus_metrics",le="
 prometheus_metrics_scrape_duration_seconds_sum{name="prometheus_metrics"} 0.00213792
 prometheus_metrics_scrape_duration_seconds_count{name="prometheus_metrics"} 1
 ```
-
-By default, metrics are exposed on port `9568` at `/metrics`. The port number
-can be configured if necessary. You are not required to use the included server,
-though it is recommended. `https` is not supported yet, in which case exposing
-a `/metrics` endpoint and calling the `scrape/1` function is your best option
-until TLS is supported.
 
 Note that aggregations for distributions (histogram) only occur at scrape time.
 These aggregations only have to process events that have occurred since the last

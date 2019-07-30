@@ -20,8 +20,7 @@ defmodule TelemetryMetricsPrometheus.Core.MixProject do
 
   def application do
     [
-      extra_applications: [:logger],
-      mod: {TelemetryMetricsPrometheus.Core.Application, []}
+      extra_applications: [:logger]
     ]
   end
 
