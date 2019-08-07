@@ -31,6 +31,8 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     aggregates_table_id = create_table(name, :set)
     dist_table_id = create_table(String.to_atom("#{name}_dist"), :duplicate_bag)
 
+    Process.flag(:trap_exit, true)
+
     send(self(), {:setup, opts})
 
     {:ok,
@@ -138,6 +140,14 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     end
   end
 
+  @impl true
+  def terminate(_reason, %{metrics: metrics, config: config} = _state) do
+    with :ok <- Enum.each(metrics, &unregister_metric/1),
+         true <- :ets.delete(config.aggregates_table_id),
+         true <- :ets.delete(config.dist_table_id),
+         do: :ok
+  end
+
   @spec create_table(name :: atom, type :: atom) :: :ets.tid() | atom
   defp create_table(name, type) do
     :ets.new(name, [:named_table, :public, type, {:write_concurrency, true}])
@@ -212,5 +222,9 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
 
   defp register_metric(%Metrics.Summary{}, _config) do
     {:error, :unsupported_metric_type, :summary}
+  end
+
+  defp unregister_metric({_metric, handler_id}) do
+    :telemetry.detach(handler_id)
   end
 end

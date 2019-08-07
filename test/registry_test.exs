@@ -63,7 +63,7 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
     metrics = [
       Metrics.distribution("some.plug.call.duration",
         buckets: [0, 1, 2],
-        unit: {:microsecond, :millisecond}
+        unit: {:native, :millisecond}
       ),
       Metrics.distribution("some_other.plug.call.duration",
         buckets: [0, 1, 2],
@@ -118,6 +118,27 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
     end)
 
     cleanup()
+  end
+
+  test "cleans up after itself on terminate", %{definitions: definitions, opts: opts} do
+    {:ok, pid} = Registry.start_link(opts)
+
+    supported_defs = Enum.reject(definitions, &match?(%Metrics.Summary{}, &1))
+
+    Enum.each(supported_defs, fn definition ->
+      Registry.register(definition, :test)
+    end)
+
+    %{config: config} = :sys.get_state(pid)
+
+    true = Process.exit(pid, :normal)
+
+    # give it a second to clean up
+    Process.sleep(50)
+
+    assert :telemetry.list_handlers([]) == []
+    assert :ets.info(config.aggregates_table_id) == :undefined
+    assert :ets.info(config.dist_table_id) == :undefined
   end
 
   defp cleanup() do
