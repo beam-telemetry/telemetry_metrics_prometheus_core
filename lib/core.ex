@@ -225,25 +225,6 @@ defmodule TelemetryMetricsPrometheus.Core do
   @spec internal_metrics() :: metrics()
   defp internal_metrics(),
     do: [
-      Metrics.distribution("prometheus_metrics.scrape.duration.seconds",
-        buckets: [0.05, 0.1, 0.2, 0.5, 1],
-        description: "A histogram of the request duration for prometheus metrics scrape.",
-        event_name: [:prometheus_metrics, :plug, :stop],
-        measurement: :duration,
-        tags: [:name],
-        tag_values: fn %{conn: conn} ->
-          %{name: conn.private[:prometheus_metrics_name]}
-        end,
-        unit: {:native, :second}
-      ),
-      Metrics.distribution("prometheus_metrics.aggregation.duration.seconds",
-        buckets: [0.05, 0.1, 0.2, 0.5, 1.0],
-        description: "A histogram of the duration for prometheus metrics aggregation",
-        event_name: [:prometheus_metrics, :aggregation, :stop],
-        measurement: :duration,
-        tags: [:name],
-        unit: {:native, :second}
-      ),
       Metrics.last_value("prometheus_metrics.table.memory.bytes",
         description: "A gauge of the memory size of a prometheus metrics aggregation table",
         event_name: [:telemetry_metrics_prometheus, :table, :status],

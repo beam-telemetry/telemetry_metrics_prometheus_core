@@ -38,7 +38,11 @@ defmodule CoreTest do
       )
     ]
 
-    opts = [name: :test_reporter, validations: [require_seconds: false]]
+    opts = [
+      name: :test_reporter,
+      validations: [require_seconds: false]
+    ]
+
     :ok = init_and_wait(metrics, opts)
 
     assert :ets.info(:test_reporter) != :undefined
