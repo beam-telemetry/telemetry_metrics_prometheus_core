@@ -109,10 +109,6 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     metrics = Keyword.get(opts, :metrics, [])
     registered = register_metrics(metrics, opts[:validations], state.config)
 
-    if opts[:monitor_reporter] do
-      monitor_tables([state.config.aggregates_table_id, state.config.dist_table_id], opts[:name])
-    end
-
     {:noreply, %{state | metrics: registered}}
   end
 
@@ -151,13 +147,6 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   @spec create_table(name :: atom, type :: atom) :: :ets.tid() | atom
   defp create_table(name, type) do
     :ets.new(name, [:named_table, :public, type, {:write_concurrency, true}])
-  end
-
-  @spec monitor_tables([atom()], atom()) :: Supervisor.on_start()
-  def monitor_tables(tables, name) do
-    measurement_specs = Enum.map(tables, &{Core.Telemetry, :dispatch_table_stats, [&1]})
-
-    Core.ReporterSupervisor.start_link(name: name, measurements: measurement_specs)
   end
 
   @spec register_metrics(

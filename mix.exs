@@ -26,12 +26,11 @@ defmodule TelemetryMetricsPrometheus.Core.MixProject do
 
   defp deps do
     [
-      {:dialyxir, "~> 1.0.0-rc.6", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.20.2", only: [:dev, :docs]},
-      {:excoveralls, "~> 0.11.1", only: :test, runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.7", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.21", only: [:dev, :docs]},
+      {:excoveralls, "~> 0.11.2", only: :test, runtime: false},
       {:telemetry, "~> 0.4"},
-      {:telemetry_metrics, "~> 0.3"},
-      {:telemetry_poller, "~> 0.4"}
+      {:telemetry_metrics, "~> 0.3"}
     ]
   end
 

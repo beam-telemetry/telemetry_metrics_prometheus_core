@@ -16,7 +16,6 @@ defmodule CoreTest do
                   [
                     validations: [consistent_units: true, require_seconds: true],
                     name: :prometheus_metrics,
-                    monitor_reporter: false,
                     metrics: []
                   ]
                 ]}
@@ -111,33 +110,6 @@ defmodule CoreTest do
              opts = [name: :test_reporter, validations: false]
              :ok = init_and_wait(metrics, opts)
            end) =~ "Metric type summary is unsupported."
-  end
-
-  test "supports monitoring the health of the reporter itself" do
-    :ok = init_and_wait([], name: :test_reporter, monitor_reporter: true, validations: false)
-    children = Supervisor.which_children(Core.ReporterSupervisor)
-
-    assert Enum.any?(children, &match?({_, _, :worker, [:telemetry_poller]}, &1))
-  end
-
-  test "reporter health monitoring is off by default" do
-    :ok = init_and_wait([], name: :test_reporter, monitor_reporter: false, validations: false)
-
-    assert is_nil(Process.whereis(Core.ReporterSupervisor))
-  end
-
-  test "doesn't interfere with other telemetry_poller instances by default" do
-    :ok = init_and_wait([], name: :test_reporter, validations: false, monitor_reporter: true)
-    children = Supervisor.which_children(Core.ReporterSupervisor)
-
-    assert Enum.any?(children, &match?({_, _, :worker, [:telemetry_poller]}, &1))
-
-    result =
-      start_supervised(
-        {:telemetry_poller, [period: 10, measurements: [], vm_measurements: [:memory]]}
-      )
-
-    assert elem(result, 0) == :ok
   end
 
   defp init_and_wait(metrics, opts) do
