@@ -3,7 +3,7 @@
 TelemetryMetricsPrometheus.Core is a [Telemetry.Metrics Reporter](https://hexdocs.pm/telemetry_metrics/overview.html#reporters) for aggregating and exposing [Prometheus](https://prometheus.io) metrics based on `Telemetry.Metrics` definitions. 
 
 The reporter runs as a supervised process but does not include a web server to expose
-your metrics. [TelemetryMetricsPrometheus](https://github.com/bryannaegele/telemetry_metrics_prometheus) provides an out of the box
+your metrics. [TelemetryMetricsPrometheus](https://github.com/beam-telemetry/telemetry_metrics_prometheus) provides an out of the box
 solution with an included web server.
 
 ## Getting Started
