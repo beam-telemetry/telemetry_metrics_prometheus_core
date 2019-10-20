@@ -120,7 +120,6 @@ defmodule TelemetryMetricsPrometheus.Core do
 
   @type prometheus_option ::
           {:name, atom()}
-          | {:monitor_reporter, bool()}
           | {:validations, Registry.validation_opts() | false}
 
   @doc """
@@ -136,9 +135,7 @@ defmodule TelemetryMetricsPrometheus.Core do
   """
   @spec child_spec(prometheus_options()) :: Supervisor.child_spec()
   def child_spec(options) do
-    opts =
-      ensure_options(options)
-      |> add_internal_metrics()
+    opts = ensure_options(options)
 
     id =
       case Keyword.get(opts, :name, :prometheus_metrics) do
@@ -160,7 +157,6 @@ defmodule TelemetryMetricsPrometheus.Core do
 
   Available options:
   * `:name` - name of the reporter instance. Defaults to `:prometheus_metrics`
-  * `:monitor_reporter` - collects metrics on the reporter's ETS table usage. Defaults to `false`
   * `:validations` - Keyword options list to control validations. All validations can be disabled by setting `validations: false`.
   * `:consistent_units` - logs a warning when mixed time units are found in your definitions. Defaults to `true`
   * `:require_seconds` - logs a warning if units other than seconds are found in your definitions. Defaults to `true`
@@ -168,9 +164,7 @@ defmodule TelemetryMetricsPrometheus.Core do
   """
   @spec start_link(prometheus_options()) :: GenServer.on_start()
   def start_link(options) do
-    opts =
-      ensure_options(options)
-      |> add_internal_metrics()
+    opts = ensure_options(options)
 
     Registry.start_link(opts)
   end
@@ -202,7 +196,6 @@ defmodule TelemetryMetricsPrometheus.Core do
   defp default_options() do
     [
       name: :prometheus_metrics,
-      monitor_reporter: false,
       validations: default_validation_options()
     ]
   end
@@ -221,32 +214,4 @@ defmodule TelemetryMetricsPrometheus.Core do
       consistent_units: on,
       require_seconds: on
     ]
-
-  @spec internal_metrics() :: metrics()
-  defp internal_metrics(),
-    do: [
-      Metrics.last_value("prometheus_metrics.table.memory.bytes",
-        description: "A gauge of the memory size of a prometheus metrics aggregation table",
-        event_name: [:telemetry_metrics_prometheus, :table, :status],
-        measurement: :memory,
-        tags: [:name],
-        unit: :byte
-      ),
-      Metrics.last_value("prometheus_metrics.table.size.total",
-        description: "A gauge of the key count of a prometheus metrics aggregation table",
-        event_name: [:telemetry_metrics_prometheus, :table, :status],
-        measurement: :size,
-        tags: [:name],
-        unit: :byte
-      )
-    ]
-
-  defp add_internal_metrics(opts) do
-    metrics = Keyword.fetch!(opts, :metrics)
-
-    case Keyword.get(opts, :monitor_reporter) do
-      true -> Keyword.put(opts, :metrics, metrics ++ internal_metrics())
-      _ -> opts
-    end
-  end
 end
