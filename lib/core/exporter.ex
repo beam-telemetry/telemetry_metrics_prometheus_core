@@ -11,7 +11,8 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
       end
     end)
     |> Enum.reject(&is_nil/1)
-    |> Enum.join("\n")
+    |> Enum.map(&[&1, "\n"])
+    |> IO.chardata_to_string()
   end
 
   def format(%Counter{} = metric, time_series) do
