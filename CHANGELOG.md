@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.2
+
+### Fixes
+
+  * The last line of the export now includes a new line character per the spec.
+  
 ## v0.2.1
 
 ### Changes
