@@ -3,6 +3,37 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
   alias Telemetry.Metrics
   alias TelemetryMetricsPrometheus.Core.Exporter
 
+  describe "export/2" do
+    test "non-printing characters" do
+      expected = """
+      # HELP http_request_total 
+      # TYPE http_request_total counter
+      http_request_total 1027
+      # HELP cache_key_total 
+      # TYPE cache_key_total gauge
+      cache_key_total 3
+      """
+
+      metrics = [
+        Metrics.counter("http.request.total"),
+        Metrics.last_value("cache.key.total")
+      ]
+
+      time_series = %{
+        [:http, :request, :total] => [
+          {{[:http, :request, :total], %{}}, 1027}
+        ],
+        [:cache, :key, :total] => [
+          {{[:cache, :key, :total], %{}}, 3}
+        ]
+      }
+
+      result = Exporter.export(time_series, metrics)
+
+      assert result == expected
+    end
+  end
+
   describe "format/2" do
     test "counter with tags" do
       expected = """
