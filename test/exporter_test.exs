@@ -210,6 +210,57 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       assert result == expected
     end
 
+    test "multiple distribution with tags" do
+      expected = """
+      # HELP http_request_duration_seconds A histogram of the request duration.
+      # TYPE http_request_duration_seconds histogram
+      http_request_duration_seconds_bucket{method="GET",le="0.05"} 24054
+      http_request_duration_seconds_bucket{method="GET",le="0.1"} 33444
+      http_request_duration_seconds_bucket{method="GET",le="0.2"} 100392
+      http_request_duration_seconds_bucket{method="GET",le="0.5"} 129389
+      http_request_duration_seconds_bucket{method="GET",le="1"} 133988
+      http_request_duration_seconds_bucket{method="GET",le="+Inf"} 144320
+      http_request_duration_seconds_sum{method="GET"} 53423
+      http_request_duration_seconds_count{method="GET"} 144320
+      http_request_duration_seconds_bucket{method="POST",le="0.05"} 24054
+      http_request_duration_seconds_bucket{method="POST",le="0.1"} 33444
+      http_request_duration_seconds_bucket{method="POST",le="0.2"} 100392
+      http_request_duration_seconds_bucket{method="POST",le="0.5"} 129389
+      http_request_duration_seconds_bucket{method="POST",le="1"} 133988
+      http_request_duration_seconds_bucket{method="POST",le="+Inf"} 144320
+      http_request_duration_seconds_sum{method="POST"} 53423
+      http_request_duration_seconds_count{method="POST"} 144320\
+      """
+
+      metric =
+        Metrics.distribution("http.request.duration.seconds",
+          buckets: [0.05, 0.1, 0.2, 0.5, 1],
+          tags: ["method"],
+          description: "A histogram of the request duration.",
+          unit: {:native, :second}
+        )
+
+      buckets = [
+        {"0.05", 24054},
+        {"0.1", 33444},
+        {"0.2", 100_392},
+        {"0.5", 129_389},
+        {"1", 133_988},
+        {"+Inf", 144_320}
+      ]
+
+      result =
+        Exporter.format(
+          metric,
+          [
+            {{metric.name, %{"method" => "GET"}}, {buckets, 144_320, 53423}},
+            {{metric.name, %{"method" => "POST"}}, {buckets, 144_320, 53423}}
+          ]
+        )
+
+      assert result == expected
+    end
+
     test "distribution without tags" do
       expected = """
       # HELP http_request_duration_seconds A histogram of the request duration.
