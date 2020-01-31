@@ -181,7 +181,15 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       http_request_duration_seconds_bucket{method="GET",le="1"} 133988
       http_request_duration_seconds_bucket{method="GET",le="+Inf"} 144320
       http_request_duration_seconds_sum{method="GET"} 53423
-      http_request_duration_seconds_count{method="GET"} 144320\
+      http_request_duration_seconds_count{method="GET"} 144320
+      http_request_duration_seconds_bucket{method="POST",le="0.05"} 24054
+      http_request_duration_seconds_bucket{method="POST",le="0.1"} 33444
+      http_request_duration_seconds_bucket{method="POST",le="0.2"} 100392
+      http_request_duration_seconds_bucket{method="POST",le="0.5"} 129389
+      http_request_duration_seconds_bucket{method="POST",le="1"} 133988
+      http_request_duration_seconds_bucket{method="POST",le="+Inf"} 144320
+      http_request_duration_seconds_sum{method="POST"} 53423
+      http_request_duration_seconds_count{method="POST"} 144320\
       """
 
       metric =
@@ -204,7 +212,10 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       result =
         Exporter.format(
           metric,
-          [{{metric.name, %{"method" => "GET"}}, {buckets, 144_320, 53423}}]
+          [
+            {{metric.name, %{"method" => "GET"}}, {buckets, 144_320, 53423}},
+            {{metric.name, %{"method" => "POST"}}, {buckets, 144_320, 53423}}
+          ]
         )
 
       assert result == expected
