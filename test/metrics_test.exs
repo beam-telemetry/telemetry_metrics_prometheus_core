@@ -281,7 +281,7 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
       end)
     end
 
-    test "detaches handler for non-numeric measurement", %{tid: tid, dist_tid: dist_tid} do
+    test "logs an error for non-numeric measurement", %{tid: tid, dist_tid: dist_tid} do
       [
         {Metrics.last_value("test.event.measure",
            measurement: :measure
@@ -309,7 +309,7 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
       end)
     end
 
-    test "detaches handler for missing tags", %{tid: tid, dist_tid: dist_tid} do
+    test "logs an error for missing tags", %{tid: tid, dist_tid: dist_tid} do
       [
         {Metrics.counter("test.event.measure",
            measurement: :measure,
