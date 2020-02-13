@@ -287,7 +287,7 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
            measurement: :measure
          ), LastValue, tid},
         {Metrics.sum("test.event.measure",
-           measurement: :measure
+           measurement: fn _ -> "this isn't a number..." end
          ), Sum, tid},
         {Metrics.distribution("test.event.measure",
            buckets: [1, 2, 3],
