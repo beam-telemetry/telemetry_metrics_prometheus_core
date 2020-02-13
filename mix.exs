@@ -30,7 +30,7 @@ defmodule TelemetryMetricsPrometheus.Core.MixProject do
       {:ex_doc, "~> 0.21", only: [:dev, :docs]},
       {:excoveralls, "~> 0.11.2", only: :test, runtime: false},
       {:telemetry, "~> 0.4"},
-      {:telemetry_metrics, "~> 0.3"}
+      {:telemetry_metrics, "~> 0.4"}
     ]
   end
 
