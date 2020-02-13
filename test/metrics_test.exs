@@ -253,7 +253,7 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
   end
 
   describe "error handling" do
-    test "detaches handler for missing measurement", %{tid: tid, dist_tid: dist_tid} do
+    test "logs an error for missing measurement", %{tid: tid, dist_tid: dist_tid} do
       [
         {Metrics.last_value("test.event.measure",
            measurement: :nonexistent
@@ -267,13 +267,17 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
          ), Distribution, dist_tid}
       ]
       |> Enum.each(fn {metric, module, table} ->
-        {:ok, _handler_id} = apply(module, :register, [metric, table, self()])
+        {:ok, handler_id} = apply(module, :register, [metric, table, self()])
 
         assert capture_log(fn ->
                  :telemetry.execute(metric.event_name, %{measure: 1})
                end) =~ "Measurement not found"
 
-        assert :telemetry.list_handlers(metric.event_name) == []
+        [handler] = :telemetry.list_handlers(metric.event_name)
+
+        assert handler.config.name == metric.name
+
+        :telemetry.detach(handler_id)
       end)
     end
 
@@ -291,13 +295,17 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
          ), Distribution, dist_tid}
       ]
       |> Enum.each(fn {metric, module, table} ->
-        {:ok, _handler_id} = apply(module, :register, [metric, table, self()])
+        {:ok, handler_id} = apply(module, :register, [metric, table, self()])
 
         assert capture_log(fn ->
                  :telemetry.execute(metric.event_name, %{measure: "a"})
                end) =~ "Expected measurement to be a number"
 
-        assert :telemetry.list_handlers(metric.event_name) == []
+        [handler] = :telemetry.list_handlers(metric.event_name)
+
+        assert handler.config.name == metric.name
+
+        :telemetry.detach(handler_id)
       end)
     end
 
@@ -322,13 +330,17 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
          ), Distribution, dist_tid}
       ]
       |> Enum.each(fn {metric, module, table} ->
-        {:ok, _handler_id} = apply(module, :register, [metric, table, self()])
+        {:ok, handler_id} = apply(module, :register, [metric, table, self()])
 
         assert capture_log(fn ->
                  :telemetry.execute(metric.event_name, %{measure: 1}, %{})
                end) =~ "Tags missing from tag_values"
 
-        assert :telemetry.list_handlers(metric.event_name) == []
+        [handler] = :telemetry.list_handlers(metric.event_name)
+
+        assert handler.config.name == metric.name
+
+        :telemetry.detach(handler_id)
       end)
     end
   end
