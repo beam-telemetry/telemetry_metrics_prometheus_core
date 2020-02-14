@@ -31,13 +31,16 @@ defmodule TelemetryMetricsPrometheus.Core.EventHandler do
   @spec get_measurement(:telemetry.event_measurements(), atom()) ::
           {:ok, number()} | measurement_not_found_error() | measurement_parse_error()
   def get_measurement(measurements, measurement) when is_atom(measurement) do
-    case Map.fetch(measurements, measurement) do
-      :error -> {:measurement_not_found, measurement}
-      {:ok, value} -> parse_measurement(value)
+    case Map.get(measurements, measurement) do
+      nil -> {:measurement_not_found, measurement}
+      value -> parse_measurement(value)
     end
   end
 
-  def get_measurement(measurements, measurement), do: {:ok, measurement.(measurements)}
+  def get_measurement(measurements, measurement_fun) do
+    measurement_fun.(measurements)
+    |> parse_measurement()
+  end
 
   # Not sure if we should be handling this. Should reporters be responsible for bad actors?
   @spec parse_measurement(term) :: {:ok, number()} | no_return()
@@ -46,23 +49,24 @@ defmodule TelemetryMetricsPrometheus.Core.EventHandler do
 
   @spec handle_event_error(event_error(), event_config) :: no_return()
   def handle_event_error({:measurement_not_found, measurement}, config) do
-    raise ArgumentError,
-          "Measurement not found, expected: #{measurement}. Detaching handler. metric_name:=#{
-            inspect(config.name)
-          }"
+    Logger.debug(
+      "Measurement not found, expected: #{measurement}. metric_name:=#{inspect(config.name)}"
+    )
   end
 
   def handle_event_error({:measurement_parse_error, term}, config) do
-    raise ArgumentError,
-          "Expected measurement to be a number, got: #{inspect(term)}. Detaching handler. metric_name:=#{
-            inspect(config.name)
-          }"
+    Logger.debug(
+      "Expected measurement to be a number, got: #{inspect(term)}. metric_name:=#{
+        inspect(config.name)
+      }"
+    )
   end
 
   def handle_event_error({:tags_missing, tags}, config) do
-    raise ArgumentError,
-          "Tags missing from tag_values. Detaching handler. metric_name:=#{inspect(config.name)} tags:=#{
-            inspect(Enum.join(tags))
-          }"
+    Logger.debug(
+      "Tags missing from tag_values. metric_name:=#{inspect(config.name)} tags:=#{
+        inspect(Enum.join(tags))
+      }"
+    )
   end
 end
