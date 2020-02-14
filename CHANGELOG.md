@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.3.0
+
+### Changes
+
+  * Handlers are no longer detached for missing or invalid measurements or tags.
+    They are now logged at `:debug` level. These errors will cause the event to
+    be skipped.
+
+### Fixes
+
+  * Type tags and description should only be logged once per distribution definition
+    and not per time series
+
 ## v0.2.2
 
 ### Fixes
