@@ -113,3 +113,7 @@ exceeding the limit of the last bucket - `+Inf`.*
 It is recommended, but not required, to abide by Prometheus' best practices regarding labels -
 [Label Best Practices](https://prometheus.io/docs/practices/naming/#labels)
 
+### Missing or Invalid Measurements and Tags
+
+If a measurement value is missing or non-numeric, the error is logged at the `debug` level
+and the event is not recorded. Events with missing tags are also logged and skipped.
