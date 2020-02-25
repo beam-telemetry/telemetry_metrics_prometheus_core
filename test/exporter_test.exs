@@ -80,6 +80,31 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       assert result == expected
     end
 
+    test "counter escape tags and help" do
+      expected =
+        ~S(# HELP db_query_total The total number of DB queries. \\\\ \\n) <> "\n" <>
+          "# TYPE db_query_total counter\n" <>
+          ~S(db_query_total{query="SELECT a0.\"id\" FROM \"users\" AS a0 WHERE LIMIT $1"} 1027) <>
+          "\n" <>
+          ~S(db_query_total{query="\\n \\\\ \""} 4242)
+
+      metric =
+        Metrics.counter("db.query.total",
+          tags: ["method", "code"],
+          description: ~S(The total number of DB queries. \\ \n)
+        )
+
+      time_series = [
+        {{[:db, :query, :total],
+          %{"query" => ~S(SELECT a0."id" FROM "users" AS a0 WHERE LIMIT $1)}}, 1027},
+        {{[:db, :query, :total], %{"query" => ~S(\n \\ ")}}, 4242}
+      ]
+
+      result = Exporter.format(metric, time_series)
+
+      assert result == expected
+    end
+
     test "last value with tags" do
       expected = """
       # HELP cache_keys_total The total number of cache keys.
