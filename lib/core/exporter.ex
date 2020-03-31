@@ -29,7 +29,7 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
 
   def format(%Distribution{} = metric, time_series) do
     name = format_name(metric.name)
-    help = "# HELP #{name} #{metric.description}"
+    help = "# HELP #{name} #{escape_help(metric.description)}"
     type = "# TYPE #{name} histogram"
 
     distributions =
@@ -68,7 +68,7 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
 
   defp format_standard({metric, time_series}, type) do
     name = format_name(metric.name)
-    help = "# HELP #{name} #{metric.description}"
+    help = "# HELP #{name} #{escape_help(metric.description)}"
     type = "# TYPE #{name} #{type}"
 
     samples =
@@ -87,7 +87,7 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
 
   defp format_labels(labels) do
     labels
-    |> Enum.map(fn {k, v} -> ~s(#{k}="#{v}") end)
+    |> Enum.map(fn {k, v} -> ~s/#{k}="#{escape(v)}"/ end)
     |> Enum.sort()
     |> Enum.join(",")
   end
@@ -96,5 +96,20 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
     name
     |> Enum.join("_")
     |> String.replace(~r/[^a-zA-Z_][^a-zA-Z0-9_]*/, "")
+  end
+
+  defp escape(value) do
+    value
+    |> to_string()
+    |> String.replace(~S("), ~S(\"))
+    |> String.replace(~S(\\), ~S(\\\\))
+    |> String.replace(~S(\n), ~S(\\n))
+  end
+
+  defp escape_help(value) do
+    value
+    |> to_string()
+    |> String.replace(~S(\\), ~S(\\\\))
+    |> String.replace(~S(\n), ~S(\\n))
   end
 end
