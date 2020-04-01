@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.1
+
+### Fixes
+
+  * Tag values containing special characters are escaped to prevent breaking the export
+  * Aggregations with tag values which don't implement String.Chars will be logged
+    and dropped.
+
 ## v0.3.0
 
 ### Changes
