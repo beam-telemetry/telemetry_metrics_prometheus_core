@@ -1,7 +1,11 @@
 defmodule TelemetryMetricsPrometheus.Core.AggregatorTest do
   use ExUnit.Case
 
-  alias TelemetryMetricsPrometheus.Core.{Aggregator, Distribution}
+  defstruct error: nil
+
+  import ExUnit.CaptureLog
+
+  alias TelemetryMetricsPrometheus.Core.{Aggregator, Counter, Distribution}
 
   setup do
     tid = :ets.new(:test_table, [:named_table, :public, :set, {:write_concurrency, true}])
@@ -33,6 +37,42 @@ defmodule TelemetryMetricsPrometheus.Core.AggregatorTest do
         result = Aggregator.bucket_measurements(measurements, buckets)
         assert(result == expected_buckets, message)
       end)
+    end
+  end
+
+  describe "get_time_series/1" do
+    test "aggregations with bad tag values are filtered and deleted",
+         %{tid: tid} do
+      metric =
+        Telemetry.Metrics.counter("http.request.error",
+          event_name: [:plug, :call, :exception],
+          tags: [:kind, :reason]
+        )
+
+      {:ok, _handler_id} = Counter.register(metric, tid, self())
+
+      :telemetry.execute([:plug, :call, :exception], %{duration: 120}, %{
+        kind: :error,
+        reason: "Oops"
+      })
+
+      :telemetry.execute([:plug, :call, :exception], %{duration: 120}, %{
+        kind: :error,
+        reason: %__MODULE__{}
+      })
+
+      expected = %{
+        [:http, :request, :error] => [
+          {{[:http, :request, :error], %{kind: :error, reason: "Oops"}}, 1}
+        ]
+      }
+
+      capture_log(fn ->
+        assert Aggregator.get_time_series(tid) == expected
+      end) =~
+        "Dropping aggregation for bad tag value. metric:=[:http, :request, :error] tag: :reason"
+
+      cleanup(tid)
     end
   end
 

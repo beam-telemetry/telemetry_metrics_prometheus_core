@@ -82,7 +82,8 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
 
     test "counter escape tags and help" do
       expected =
-        ~S(# HELP db_query_total The total number of DB queries. \\\\ \\n) <> "\n" <>
+        ~S(# HELP db_query_total The total number of DB queries. \\\\ \\n) <>
+          "\n" <>
           "# TYPE db_query_total counter\n" <>
           ~S(db_query_total{query="SELECT a0.\"id\" FROM \"users\" AS a0 WHERE LIMIT $1"} 1027) <>
           "\n" <>
