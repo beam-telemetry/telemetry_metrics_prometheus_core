@@ -89,13 +89,16 @@ It is therefore recommended to use the name in your definition to reflect the na
 you wish to see reported, e.g. `"http.request.duration.seconds"` or `[:http, :request, :duration, :seconds]` and use the `:event_name` override and `:measurement` options in your definition.
 
 Example:
+
 ```
 Metrics.distribution(
   "http.request.duration.seconds",
-  buckets: [0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1],
   event_name: [:http, :request, :complete],
   measurement: :duration,
-  unit: {:native, :second}
+  unit: {:native, :second},
+  reporter_options: [
+    buckets: [0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1]
+  ]
 )
 ```
 
