@@ -9,7 +9,7 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
   setup do
     definitions = [
       Metrics.counter("http.request.count"),
-      Metrics.distribution("some.plug.call.duration", buckets: [0, 1, 2]),
+      Metrics.distribution("some.plug.call.duration", reporter_options: [buckets: [0, 1, 2]]),
       Metrics.last_value("vm.memory.total"),
       Metrics.sum("cache.invalidations.total"),
       Metrics.summary("http.request.duration")
@@ -62,14 +62,18 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
   test "validates for units" do
     metrics = [
       Metrics.distribution("some.plug.call.duration",
-        buckets: [0, 1, 2],
+        reporter_options: [
+          buckets: [0, 1, 2]
+        ],
         unit: {:native, :millisecond}
       ),
       Metrics.distribution("some_other.plug.call.duration",
-        buckets: [0, 1, 2],
+        reporter_options: [
+          buckets: [0, 1, 2]
+        ],
         unit: {:microsecond, :second}
       ),
-      Metrics.distribution("some_third.plug.call.duration", buckets: [0, 1, 2], unit: :millisecond),
+      Metrics.distribution("some_third.plug.call.duration", reporter_options: [buckets: [0, 1, 2]], unit: :millisecond),
       Metrics.counter("http.request.count", unit: :byte)
     ]
 

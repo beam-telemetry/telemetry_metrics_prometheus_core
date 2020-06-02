@@ -204,7 +204,14 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
 
   defp register_metric(%Metrics.Distribution{} = metric, config) do
     case Distribution.register(metric, config.dist_table_id, self()) do
-      {:ok, handler_id} -> {:ok, {%{metric | buckets: metric.buckets ++ ["+Inf"]}, handler_id}}
+      {:ok, handler_id} ->
+        reporter_options = Keyword.update(
+          metric.reporter_options,
+          :buckets,
+          [],
+          &(&1 ++ ["+Inf"])
+        )
+        {:ok, {%{metric | reporter_options: reporter_options}, handler_id}}
       {:error, :already_exists} -> {:error, :already_exists, metric.name}
     end
   end

@@ -87,12 +87,14 @@ defmodule TelemetryMetricsPrometheus.Core.AggregatorTest do
 
       metric =
         Telemetry.Metrics.distribution("some.plug.call.duration",
-          buckets: buckets,
           description: "Plug call duration",
           event_name: [:some, :plug, :call, :stop],
           measurement: :duration,
           unit: {:native, :second},
           tags: [:method, :path_root],
+          reporter_options: [
+            buckets: buckets,
+          ],
           tag_values: fn %{conn: conn} ->
             %{
               method: conn.method,
@@ -101,7 +103,7 @@ defmodule TelemetryMetricsPrometheus.Core.AggregatorTest do
           end
         )
 
-      metric = %{metric | buckets: metric.buckets ++ ["+Inf"]}
+      metric = %{metric | reporter_options: [buckets: buckets ++ ["+Inf"]]}
 
       {:ok, _handler_id} = Distribution.register(metric, dist_tid, self())
 
