@@ -205,10 +205,9 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   defp register_metric(%Metrics.Distribution{} = metric, config) do
     case Distribution.register(metric, config.dist_table_id, self()) do
       {:ok, handler_id} ->
-        reporter_options = Keyword.update(
+        reporter_options = Keyword.update!(
           metric.reporter_options,
           :buckets,
-          [],
           &(&1 ++ ["+Inf"])
         )
         {:ok, {%{metric | reporter_options: reporter_options}, handler_id}}

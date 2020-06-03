@@ -4,6 +4,8 @@ defmodule TelemetryMetricsPrometheus.Core.Distribution do
   alias Telemetry.Metrics
   alias TelemetryMetricsPrometheus.Core.EventHandler
 
+  @type buckets :: [number(), ...]
+
   @type config :: %{
           measurement: Metrics.measurement(),
           metric_name: String.t(),

@@ -110,7 +110,7 @@ defmodule TelemetryMetricsPrometheus.Core.Aggregator do
     end)
   end
 
-  @spec bucket_measurements(measurements :: [number()], buckets :: tuple() | Keyword.t()) ::
+  @spec bucket_measurements(measurements :: [number()], buckets :: Core.Distribution.buckets()) ::
           {[bucket()], non_neg_integer(), number()}
   def bucket_measurements(measurements, [b | buckets]),
     do: bucket(measurements, buckets, b, 0, 0, [])
