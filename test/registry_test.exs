@@ -59,6 +59,49 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
     cleanup()
   end
 
+  test "validates for distribution buckets" do
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("some.plug.call.duration")
+      |> Registry.validate_distribution_buckets!()
+    end
+
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("some.plug.call.duration",
+        reporter_options: [
+          buckets: {300..100, 100}
+        ]
+      )
+      |> Registry.validate_distribution_buckets!()
+    end
+
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("some.plug.call.duration",
+        reporter_options: [
+          buckets: {100..350, 100}
+        ]
+      )
+      |> Registry.validate_distribution_buckets!()
+    end
+
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("some.plug.call.duration",
+        reporter_options: [
+          buckets: [0, 200, 100]
+        ]
+      )
+      |> Registry.validate_distribution_buckets!()
+    end
+
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("some.plug.call.duration",
+        reporter_options: [
+          buckets: []
+        ]
+      )
+      |> Registry.validate_distribution_buckets!()
+    end
+  end
+
   test "validates for units" do
     metrics = [
       Metrics.distribution("some.plug.call.duration",

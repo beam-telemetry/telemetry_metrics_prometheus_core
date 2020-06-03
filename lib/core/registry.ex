@@ -81,7 +81,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
 
   defp validate_consistent_units(_units, _), do: :ok
 
-  defp validate_distribution_buckets!(%Metrics.Distribution{} = metric) do
+  def validate_distribution_buckets!(%Metrics.Distribution{} = metric) do
     reporter_options = metric.reporter_options
 
     unless reporter_options != nil do
@@ -96,7 +96,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   end
 
   @spec validate_distribution_buckets!(term()) :: Distribution.buckets() | no_return()
-  defp validate_distribution_buckets!([_ | _] = buckets) do
+  def validate_distribution_buckets!([_ | _] = buckets) do
     unless Enum.all?(buckets, &is_number/1) do
       raise ArgumentError,
             "expected buckets list to contain only numbers, got #{inspect(buckets)}"
@@ -109,7 +109,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     buckets
   end
 
-  defp validate_distribution_buckets!({first..last, step} = buckets) when is_integer(step) do
+  def validate_distribution_buckets!({first..last, step} = buckets) when is_integer(step) do
     if first >= last do
       raise ArgumentError, "expected buckets range to be ascending, got #{inspect(buckets)}"
     end
@@ -125,7 +125,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     |> Enum.take_while(&(&1 <= last))
   end
 
-  defp validate_distribution_buckets!(term) do
+  def validate_distribution_buckets!(term) do
     raise ArgumentError,
           "expected buckets to be a non-empty list or a {range, step} tuple, got #{inspect(term)}"
   end
