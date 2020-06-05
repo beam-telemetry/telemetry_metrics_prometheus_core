@@ -18,6 +18,7 @@ defmodule TelemetryMetricsPrometheus.Core.Distribution do
   @type buckets :: [number(), ...]
 
   @type config :: %{
+          keep: Metrics.keep(),
           measurement: Metrics.measurement(),
           metric_name: String.t(),
           name: Metrics.normalized_metric_name(),
@@ -40,6 +41,7 @@ defmodule TelemetryMetricsPrometheus.Core.Distribution do
              metric.event_name,
              &handle_event/4,
              %{
+               keep: metric.keep,
                measurement: metric.measurement,
                metric_name: "",
                name: metric.name,
@@ -64,7 +66,8 @@ defmodule TelemetryMetricsPrometheus.Core.Distribution do
           config()
         ) :: :ok
   def handle_event(_event, measurements, metadata, config) do
-    with {:ok, measurement} <- EventHandler.get_measurement(measurements, config.measurement),
+    with true <- EventHandler.keep?(config.keep, metadata),
+         {:ok, measurement} <- EventHandler.get_measurement(measurements, config.measurement),
          mapped_values <- config.tag_values_fun.(metadata),
          :ok <- EventHandler.validate_tags_in_tag_values(config.tags, mapped_values),
          labels <- Map.take(mapped_values, config.tags) do
@@ -72,6 +75,7 @@ defmodule TelemetryMetricsPrometheus.Core.Distribution do
 
       :ok
     else
+      false -> :ok
       error -> EventHandler.handle_event_error(error, config)
     end
   end

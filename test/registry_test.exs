@@ -116,7 +116,10 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
         ],
         unit: {:microsecond, :second}
       ),
-      Metrics.distribution("some_third.plug.call.duration", reporter_options: [buckets: [0, 1, 2]], unit: :millisecond),
+      Metrics.distribution("some_third.plug.call.duration",
+        reporter_options: [buckets: [0, 1, 2]],
+        unit: :millisecond
+      ),
       Metrics.counter("http.request.count", unit: :byte)
     ]
 

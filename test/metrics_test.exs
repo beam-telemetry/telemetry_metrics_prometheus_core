@@ -41,6 +41,7 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
       metric =
         Metrics.counter("http.request.count",
           description: "HTTP Request Count",
+          drop: &match?(%{a: "drop"}, &1),
           unit: :each,
           tags: [:method, :status]
         )
@@ -50,6 +51,12 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
       :telemetry.execute([:http, :request], %{latency: 17}, %{method: "GET", status: 200})
       :telemetry.execute([:http, :request], %{latency: 20}, %{method: "GET", status: 200})
       :telemetry.execute([:http, :request], %{latency: 22}, %{method: "GET", status: 404})
+
+      :telemetry.execute([:http, :request], %{latency: 100}, %{
+        method: "GET",
+        status: 404,
+        a: "drop"
+      })
 
       [t1] = :ets.lookup(tid, {metric.name, %{method: "GET", status: 200}})
       [t2] = :ets.lookup(tid, {metric.name, %{method: "GET", status: 404}})
@@ -81,6 +88,7 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
       metric =
         Metrics.last_value("vm.memory.total",
           description: "BEAM VM memory",
+          drop: &match?(%{a: "drop"}, &1),
           unit: :bytes,
           tags: [:some_tag]
         )
@@ -94,6 +102,12 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
       [t2] = :ets.lookup(tid, {metric.name, %{some_tag: "b"}})
 
       :telemetry.execute([:vm, :memory], %{total: 210_000, system: 1_100}, %{some_tag: "a"})
+
+      :telemetry.execute([:vm, :memory], %{total: 210_000, system: 1_100}, %{
+        some_tag: "a",
+        a: "drop"
+      })
+
       [t3] = :ets.lookup(tid, {metric.name, %{some_tag: "a"}})
 
       assert elem(t1, 1) == 200_000
@@ -125,6 +139,7 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
       metric =
         Metrics.sum("cache.invalidation.total",
           description: "Total cache invalidations",
+          drop: &match?(%{a: "drop"}, &1),
           measurement: :count,
           unit: :each,
           tags: [:name]
@@ -139,6 +154,7 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
       [t2] = :ets.lookup(tid, {metric.name, %{name: "clients"}})
 
       :telemetry.execute([:cache, :invalidation], %{count: 5}, %{name: "users"})
+      :telemetry.execute([:cache, :invalidation], %{count: 10}, %{name: "users", a: "drop"})
       [t3] = :ets.lookup(tid, {metric.name, %{name: "users"}})
 
       assert elem(t1, 1) == 23
@@ -214,6 +230,7 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
           buckets: buckets,
           description: "Plug call duration",
           event_name: [:some, :plug, :call, :stop],
+          drop: &match?(%{conn: %{path_info: ["skip"]}}, &1),
           measurement: :duration,
           unit: {:native, :second},
           tags: [:method, :path_root],
@@ -237,6 +254,10 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
 
       :telemetry.execute([:some, :plug, :call, :stop], %{duration: 8.7e7}, %{
         conn: %{method: "GET", path_info: ["users", "123"]}
+      })
+
+      :telemetry.execute([:some, :plug, :call, :stop], %{duration: 1.7e7}, %{
+        conn: %{method: "GET", path_info: ["skip"]}
       })
 
       # , %{method: "GET", path_root: "users"}}
