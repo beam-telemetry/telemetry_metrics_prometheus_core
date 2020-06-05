@@ -31,7 +31,7 @@ defmodule TelemetryMetricsPrometheus.Core.Aggregator do
         prev_agg = get_aggregation(key, tid)
 
         Enum.sort(samples)
-        |> bucket_measurements(metric.buckets)
+        |> bucket_measurements(metric.reporter_options[:buckets])
         |> merge(prev_agg)
         |> put_aggregation(key, tid)
       end)
@@ -110,7 +110,7 @@ defmodule TelemetryMetricsPrometheus.Core.Aggregator do
     end)
   end
 
-  @spec bucket_measurements(measurements :: [number()], buckets :: Metrics.Distribution.buckets()) ::
+  @spec bucket_measurements(measurements :: [number()], buckets :: Core.Distribution.buckets()) ::
           {[bucket()], non_neg_integer(), number()}
   def bucket_measurements(measurements, [b | buckets]),
     do: bucket(measurements, buckets, b, 0, 0, [])

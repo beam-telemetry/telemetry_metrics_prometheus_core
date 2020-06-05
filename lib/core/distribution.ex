@@ -4,6 +4,19 @@ defmodule TelemetryMetricsPrometheus.Core.Distribution do
   alias Telemetry.Metrics
   alias TelemetryMetricsPrometheus.Core.EventHandler
 
+  @typedoc """
+  Distribution metric bucket boundaries.
+
+  Bucket boundaries are represented by a non-empty list of increasing numbers.
+
+  ## Examples
+      [0, 100, 200, 300]
+      # Buckets: [-inf, 0], [0, 100], [100, 200], [200, 300], [300, +inf]
+      [99.9]
+      # Buckets: [-inf, 99.9], [99.9, +inf]
+  """
+  @type buckets :: [number(), ...]
+
   @type config :: %{
           measurement: Metrics.measurement(),
           metric_name: String.t(),

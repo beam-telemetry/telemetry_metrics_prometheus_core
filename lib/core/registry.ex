@@ -81,6 +81,57 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
 
   defp validate_consistent_units(_units, _), do: :ok
 
+  def validate_distribution_buckets!(%Metrics.Distribution{} = metric) do
+    reporter_options = metric.reporter_options
+
+    unless reporter_options != nil do
+      raise ArgumentError,
+            "reporter_options with a valid buckets property are required to be defined for Distribution metrics"
+    end
+
+    unless Keyword.get(reporter_options, :buckets) != nil do
+      raise ArgumentError,
+            "reporter_options is missing the required buckets property for Distribution metrics"
+    end
+
+    validate_distribution_buckets!(reporter_options[:buckets])
+  end
+
+  @spec validate_distribution_buckets!(term()) :: Distribution.buckets() | no_return()
+  def validate_distribution_buckets!([_ | _] = buckets) do
+    unless Enum.all?(buckets, &is_number/1) do
+      raise ArgumentError,
+            "expected buckets list to contain only numbers, got #{inspect(buckets)}"
+    end
+
+    unless buckets == Enum.sort(buckets) do
+      raise ArgumentError, "expected buckets to be ordered ascending, got #{inspect(buckets)}"
+    end
+
+    buckets
+  end
+
+  def validate_distribution_buckets!({first..last, step} = buckets) when is_integer(step) do
+    if first >= last do
+      raise ArgumentError, "expected buckets range to be ascending, got #{inspect(buckets)}"
+    end
+
+    if rem(last - first, step) != 0 do
+      raise ArgumentError,
+            "expected buckets range first and last to fall within all range steps " <>
+              "(i.e. rem(last - first, step) == 0), got #{inspect(buckets)}"
+    end
+
+    first
+    |> Stream.iterate(&(&1 + step))
+    |> Enum.take_while(&(&1 <= last))
+  end
+
+  def validate_distribution_buckets!(term) do
+    raise ArgumentError,
+          "expected buckets to be a non-empty list or a {range, step} tuple, got #{inspect(term)}"
+  end
+
   @spec validate_units_seconds([Metrics.time_unit()], bool()) :: :ok
   defp validate_units_seconds(_, false), do: :ok
   defp validate_units_seconds([:second], _), do: :ok
@@ -203,8 +254,16 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   end
 
   defp register_metric(%Metrics.Distribution{} = metric, config) do
+    validate_distribution_buckets!(metric)
+
     case Distribution.register(metric, config.dist_table_id, self()) do
-      {:ok, handler_id} -> {:ok, {%{metric | buckets: metric.buckets ++ ["+Inf"]}, handler_id}}
+      {:ok, handler_id} ->
+        reporter_options = Keyword.update!(
+          metric.reporter_options,
+          :buckets,
+          &(&1 ++ ["+Inf"])
+        )
+        {:ok, {%{metric | reporter_options: reporter_options}, handler_id}}
       {:error, :already_exists} -> {:error, :already_exists, metric.name}
     end
   end

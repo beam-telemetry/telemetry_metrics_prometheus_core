@@ -9,7 +9,7 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
   setup do
     definitions = [
       Metrics.counter("http.request.count"),
-      Metrics.distribution("some.plug.call.duration", buckets: [0, 1, 2]),
+      Metrics.distribution("some.plug.call.duration", reporter_options: [buckets: [0, 1, 2]]),
       Metrics.last_value("vm.memory.total"),
       Metrics.sum("cache.invalidations.total"),
       Metrics.summary("http.request.duration")
@@ -59,17 +59,64 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
     cleanup()
   end
 
+  test "validates for distribution buckets" do
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("some.plug.call.duration")
+      |> Registry.validate_distribution_buckets!()
+    end
+
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("some.plug.call.duration",
+        reporter_options: [
+          buckets: {300..100, 100}
+        ]
+      )
+      |> Registry.validate_distribution_buckets!()
+    end
+
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("some.plug.call.duration",
+        reporter_options: [
+          buckets: {100..350, 100}
+        ]
+      )
+      |> Registry.validate_distribution_buckets!()
+    end
+
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("some.plug.call.duration",
+        reporter_options: [
+          buckets: [0, 200, 100]
+        ]
+      )
+      |> Registry.validate_distribution_buckets!()
+    end
+
+    assert_raise ArgumentError, fn ->
+      Metrics.distribution("some.plug.call.duration",
+        reporter_options: [
+          buckets: []
+        ]
+      )
+      |> Registry.validate_distribution_buckets!()
+    end
+  end
+
   test "validates for units" do
     metrics = [
       Metrics.distribution("some.plug.call.duration",
-        buckets: [0, 1, 2],
+        reporter_options: [
+          buckets: [0, 1, 2]
+        ],
         unit: {:native, :millisecond}
       ),
       Metrics.distribution("some_other.plug.call.duration",
-        buckets: [0, 1, 2],
+        reporter_options: [
+          buckets: [0, 1, 2]
+        ],
         unit: {:microsecond, :second}
       ),
-      Metrics.distribution("some_third.plug.call.duration", buckets: [0, 1, 2], unit: :millisecond),
+      Metrics.distribution("some_third.plug.call.duration", reporter_options: [buckets: [0, 1, 2]], unit: :millisecond),
       Metrics.counter("http.request.count", unit: :byte)
     ]
 
