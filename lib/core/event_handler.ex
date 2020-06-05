@@ -20,6 +20,10 @@ defmodule TelemetryMetricsPrometheus.Core.EventHandler do
     {__MODULE__, reporter, name}
   end
 
+  @spec keep?(Metrics.keep(), metadata :: :telemetry.event_metadata()) :: boolean()
+  def keep?(nil, _metadata), do: true
+  def keep?(keep_fun, metadata), do: keep_fun.(metadata)
+
   @spec validate_tags_in_tag_values(Telemetry.Metrics.tags(), map()) :: :ok | tags_missing_error()
   def validate_tags_in_tag_values(tags, tag_values) do
     case Enum.reject(tags, &match?(%{^&1 => _}, tag_values)) do

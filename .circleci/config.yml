@@ -44,7 +44,7 @@ orbs:
                 - v1-deps-<<parameters.elixir>>-<<parameters.otp>>
           - run: mix deps.get
           - run: mix coveralls.json
-          - run: mix dialyzer --halt-exit-status
+          - run: mix dialyzer
           - run: mix format --check-formatted || echo 'skipping due to false negatives'
           - run:
               name: Install curl

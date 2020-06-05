@@ -93,7 +93,7 @@ defmodule TelemetryMetricsPrometheus.Core.AggregatorTest do
           unit: {:native, :second},
           tags: [:method, :path_root],
           reporter_options: [
-            buckets: buckets,
+            buckets: buckets
           ],
           tag_values: fn %{conn: conn} ->
             %{

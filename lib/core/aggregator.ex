@@ -43,11 +43,12 @@ defmodule TelemetryMetricsPrometheus.Core.Aggregator do
   @spec get_time_series(atom()) :: %{:telemetry.event_name() => [sample()]}
   def get_time_series(table_id) do
     :ets.tab2list(table_id)
-    |> Stream.filter(&(filter_and_drop_time_series_with_bad_tag_values(&1, table_id)))
+    |> Stream.filter(&filter_and_drop_time_series_with_bad_tag_values(&1, table_id))
     |> Enum.group_by(fn row -> row |> elem(0) |> elem(0) end)
   end
 
   defp filter_and_drop_time_series_with_bad_tag_values({[_, %{}], _}, _), do: true
+
   defp filter_and_drop_time_series_with_bad_tag_values({key, _}, table_id) do
     key
     |> elem(1)
@@ -56,7 +57,7 @@ defmodule TelemetryMetricsPrometheus.Core.Aggregator do
         nil ->
           Logger.warn(
             "Dropping aggregation for bad tag value. metric:=#{inspect(elem(key, 0))} tag: #{
-            inspect(label_key)
+              inspect(label_key)
             }"
           )
 

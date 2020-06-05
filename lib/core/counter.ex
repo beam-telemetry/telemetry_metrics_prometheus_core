@@ -5,6 +5,7 @@ defmodule TelemetryMetricsPrometheus.Core.Counter do
   alias TelemetryMetricsPrometheus.Core.EventHandler
 
   @type config :: %{
+          keep: Metrics.keep(),
           measurement: atom(),
           metric_name: String.t(),
           name: Metrics.normalized_metric_name(),
@@ -26,6 +27,7 @@ defmodule TelemetryMetricsPrometheus.Core.Counter do
              metric.event_name,
              &handle_event/4,
              %{
+               keep: metric.keep,
                metric_name: "",
                name: metric.name,
                table: table_id,
@@ -49,13 +51,15 @@ defmodule TelemetryMetricsPrometheus.Core.Counter do
         ) :: :ok
 
   def handle_event(_event, _measurements, metadata, config) do
-    with mapped_values <- config.tag_values_fun.(metadata),
+    with true <- EventHandler.keep?(config.keep, metadata),
+         mapped_values <- config.tag_values_fun.(metadata),
          :ok <- EventHandler.validate_tags_in_tag_values(config.tags, mapped_values) do
       labels = Map.take(mapped_values, config.tags)
       key = {config.name, labels}
       _res = :ets.update_counter(config.table, key, 1, {key, 0})
       :ok
     else
+      false -> :ok
       error -> EventHandler.handle_event_error(error, config)
     end
   end
