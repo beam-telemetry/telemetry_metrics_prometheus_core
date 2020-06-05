@@ -20,7 +20,7 @@ defmodule TelemetryMetricsPrometheus.Core.EventHandler do
     {__MODULE__, reporter, name}
   end
 
-  @spec keep?(Metrics.keep(), metadata :: Metrics.metadata()) :: boolean()
+  @spec keep?(Metrics.keep(), metadata :: :telemetry.event_metadata()) :: boolean()
   def keep?(nil, _metadata), do: true
   def keep?(keep_fun, metadata), do: keep_fun.(metadata)
 
