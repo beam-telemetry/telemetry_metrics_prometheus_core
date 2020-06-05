@@ -85,11 +85,13 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     reporter_options = metric.reporter_options
 
     unless reporter_options != nil do
-      raise ArgumentError, "expected reporter_options to be on metric"
+      raise ArgumentError,
+            "reporter_options with a valid buckets property are required to be defined for Distribution metrics"
     end
 
     unless Keyword.get(reporter_options, :buckets) != nil do
-      raise ArgumentError, "expected :buckets to be in `reporter_options`"
+      raise ArgumentError,
+            "reporter_options is missing the required buckets property for Distribution metrics"
     end
 
     validate_distribution_buckets!(reporter_options[:buckets])
