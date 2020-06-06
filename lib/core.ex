@@ -112,20 +112,14 @@ defmodule TelemetryMetricsPrometheus.Core do
 
   require Logger
 
-  @type metric ::
-          Metrics.Counter.t()
-          | Metrics.Distribution.t()
-          | Metrics.LastValue.t()
-          | Metrics.Sum.t()
-          | Metrics.Summary.t()
-
-  @type metrics :: [metric()]
-
-  @type prometheus_options :: [prometheus_option()]
+  @type metrics :: [Metrics.t()]
 
   @type prometheus_option ::
-          {:name, atom()}
+          {:metrics, metrics()}
+          | {:name, atom()}
           | {:validations, Registry.validation_opts() | false}
+
+  @type prometheus_options :: [prometheus_option()]
 
   @doc """
   Reporter's child spec.
