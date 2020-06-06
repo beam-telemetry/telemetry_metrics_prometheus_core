@@ -36,7 +36,7 @@ defmodule TelemetryMetricsPrometheus.Core.MixProject do
 
   defp docs do
     [
-      main: "overview",
+      main: "TelemetryMetricsPrometheus.Core",
       canonical: "http://hexdocs.pm/telemetry_metrics_prometheus_core",
       source_url: "https://github.com/beam-telemetry/telemetry_metrics_prometheus_core",
       source_ref: "v#{@version}",
