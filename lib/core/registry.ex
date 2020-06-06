@@ -9,7 +9,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   alias TelemetryMetricsPrometheus.Core.{Counter, Distribution, LastValue, Sum}
 
   @type name :: atom()
-  @type metric_exists_error() :: {:error, :already_exists, Core.metric()}
+  @type metric_exists_error() :: {:error, :already_exists, Metrics.t()}
   @type unsupported_metric_type_error() :: {:error, :unsupported_metric_type, :summary}
   @type validation_opts() :: [consistent_units: bool(), require_seconds: bool()]
 
@@ -42,7 +42,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
      }}
   end
 
-  @spec register(Core.metric(), atom()) ::
+  @spec register(Metrics.t(), atom()) ::
           :ok | metric_exists_error() | unsupported_metric_type_error()
   def register(metric, name \\ __MODULE__) do
     # validate metrics units ?
@@ -50,8 +50,8 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     GenServer.call(name, {:register, metric})
   end
 
-  @spec validate_units(Core.metrics(), validation_opts()) ::
-          Core.metrics()
+  @spec validate_units([Metrics.t()], validation_opts()) ::
+          [Metrics.t()]
   def validate_units(metrics, opts) do
     time_units =
       metrics
@@ -150,7 +150,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     GenServer.call(name, :get_config)
   end
 
-  @spec metrics(name()) :: [{Core.metric(), :telemetry.handler_id()}]
+  @spec metrics(name()) :: [{Metrics.t(), :telemetry.handler_id()}]
   def metrics(name) do
     GenServer.call(name, :get_metrics)
   end
@@ -177,7 +177,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   end
 
   @impl true
-  @spec handle_call({:register, Core.metric()}, GenServer.from(), map()) ::
+  @spec handle_call({:register, Metrics.t()}, GenServer.from(), map()) ::
           {:reply, :ok, map()}
           | {:reply, metric_exists_error() | unsupported_metric_type_error(), map()}
   def handle_call({:register, metric}, _from, state) do
@@ -201,10 +201,10 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   end
 
   @spec register_metrics(
-          Core.metrics(),
+          [Metrics.t()],
           validation_opts(),
           %{}
-        ) :: :ok
+        ) ::  [Metrics.t()]
   defp register_metrics(metrics, validations, config) do
     metrics
     |> validate_units(validations)
