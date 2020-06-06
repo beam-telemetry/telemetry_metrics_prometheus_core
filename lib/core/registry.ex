@@ -5,13 +5,11 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   require Logger
 
   alias Telemetry.Metrics
-  alias TelemetryMetricsPrometheus.Core
   alias TelemetryMetricsPrometheus.Core.{Counter, Distribution, LastValue, Sum}
 
   @type name :: atom()
   @type metric_exists_error() :: {:error, :already_exists, Metrics.t()}
   @type unsupported_metric_type_error() :: {:error, :unsupported_metric_type, :summary}
-  @type validation_opts() :: [consistent_units: bool(), require_seconds: bool()]
 
   # metric_name should be the validated and normalized prometheus
   # name - https://prometheus.io/docs/instrumenting/writing_exporters/#naming
@@ -45,41 +43,8 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   @spec register(Metrics.t(), atom()) ::
           :ok | metric_exists_error() | unsupported_metric_type_error()
   def register(metric, name \\ __MODULE__) do
-    # validate metrics units ?
-
     GenServer.call(name, {:register, metric})
   end
-
-  @spec validate_units([Metrics.t()], validation_opts()) ::
-          [Metrics.t()]
-  def validate_units(metrics, opts) do
-    time_units =
-      metrics
-      |> Enum.filter(&match?(%Metrics.Distribution{}, &1))
-      |> Enum.reduce(MapSet.new([]), fn
-        %{unit: {_from, to}}, acc -> MapSet.put(acc, to)
-        %{unit: unit}, acc when is_atom(unit) -> MapSet.put(acc, unit)
-      end)
-      |> MapSet.to_list()
-
-    validate_consistent_units(time_units, opts[:consistent_units])
-    validate_units_seconds(time_units, opts[:require_seconds])
-
-    metrics
-  end
-
-  @spec validate_consistent_units([Metrics.time_unit()], bool()) :: :ok
-  defp validate_consistent_units(_, false), do: :ok
-
-  defp validate_consistent_units(units, true) when length(units) > 1 do
-    Logger.warn(
-      "Multiple time units found in your Telemetry.Metrics definitions.\n\nPrometheus recommends using consistent time units to make view creation simpler.\n\nYou can disable this validation check by adding `consistent_units: false` in the validations options on reporter init."
-    )
-
-    :ok
-  end
-
-  defp validate_consistent_units(_units, _), do: :ok
 
   def validate_distribution_buckets!(%Metrics.Distribution{} = metric) do
     reporter_options = metric.reporter_options
@@ -132,19 +97,6 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
           "expected buckets to be a non-empty list or a {range, step} tuple, got #{inspect(term)}"
   end
 
-  @spec validate_units_seconds([Metrics.time_unit()], bool()) :: :ok
-  defp validate_units_seconds(_, false), do: :ok
-  defp validate_units_seconds([:second], _), do: :ok
-  defp validate_units_seconds([], _), do: :ok
-
-  defp validate_units_seconds(_, _) do
-    Logger.warn(
-      "Prometheus requires that time units MUST only be offered in seconds according to their guidelines, though this is not always practical.\n\nhttps://prometheus.io/docs/instrumenting/writing_clientlibs/#histogram.\n\nYou can disable this validation check by adding `require_seconds: false` in the validations options on reporter init."
-    )
-
-    :ok
-  end
-
   @spec config(name()) :: %{aggregates_table_id: atom(), dist_table_id: atom()}
   def config(name) do
     GenServer.call(name, :get_config)
@@ -158,7 +110,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   @impl true
   def handle_info({:setup, opts}, state) do
     metrics = Keyword.get(opts, :metrics, [])
-    registered = register_metrics(metrics, opts[:validations], state.config)
+    registered = register_metrics(metrics, state.config)
 
     {:noreply, %{state | metrics: registered}}
   end
@@ -202,12 +154,10 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
 
   @spec register_metrics(
           [Metrics.t()],
-          validation_opts(),
           %{}
-        ) ::  [Metrics.t()]
-  defp register_metrics(metrics, validations, config) do
+        ) :: [Metrics.t()]
+  defp register_metrics(metrics, config) do
     metrics
-    |> validate_units(validations)
     |> Enum.reduce([], fn metric, acc ->
       case register_metric(metric, config) do
         {:ok, metric} ->

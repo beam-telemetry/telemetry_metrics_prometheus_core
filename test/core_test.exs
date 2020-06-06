@@ -14,7 +14,6 @@ defmodule CoreTest do
                {Core.Registry, :start_link,
                 [
                   [
-                    validations: [consistent_units: true, require_seconds: true],
                     name: :prometheus_metrics,
                     metrics: []
                   ]
@@ -38,8 +37,7 @@ defmodule CoreTest do
     ]
 
     opts = [
-      name: :test_reporter,
-      validations: [require_seconds: false]
+      name: :test_reporter
     ]
 
     :ok = init_and_wait(metrics, opts)

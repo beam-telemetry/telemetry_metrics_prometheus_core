@@ -117,7 +117,6 @@ defmodule TelemetryMetricsPrometheus.Core do
   @type prometheus_option ::
           {:metrics, metrics()}
           | {:name, atom()}
-          | {:validations, Registry.validation_opts() | false}
 
   @type prometheus_options :: [prometheus_option()]
 
@@ -156,9 +155,6 @@ defmodule TelemetryMetricsPrometheus.Core do
 
   Available options:
   * `:name` - name of the reporter instance. Defaults to `:prometheus_metrics`
-  * `:validations` - Keyword options list to control validations. All validations can be disabled by setting `validations: false`.
-  * `:consistent_units` - logs a warning when mixed time units are found in your definitions. Defaults to `true`
-  * `:require_seconds` - logs a warning if units other than seconds are found in your definitions. Defaults to `true`
   * `:metrics` - a list of metrics to track.
   """
   @spec start_link(prometheus_options()) :: GenServer.on_start()
@@ -185,32 +181,13 @@ defmodule TelemetryMetricsPrometheus.Core do
 
   @spec ensure_options(prometheus_options()) :: prometheus_options()
   defp ensure_options(options) do
-    validation_opts = ensure_validation_options(Keyword.get(options, :validations, []))
-
     Keyword.merge(default_options(), options)
-    |> Keyword.put(:validations, validation_opts)
   end
 
   @spec default_options() :: prometheus_options()
   defp default_options() do
     [
-      name: :prometheus_metrics,
-      validations: default_validation_options()
+      name: :prometheus_metrics
     ]
   end
-
-  @spec ensure_validation_options(bool() | Registry.validation_opts()) ::
-          Registry.validation_opts()
-  defp ensure_validation_options(false), do: default_validation_options(false)
-
-  defp ensure_validation_options(opts) do
-    Keyword.merge(default_validation_options(), opts)
-  end
-
-  @spec default_validation_options(bool()) :: Registry.validation_opts()
-  defp default_validation_options(on \\ true),
-    do: [
-      consistent_units: on,
-      require_seconds: on
-    ]
 end
