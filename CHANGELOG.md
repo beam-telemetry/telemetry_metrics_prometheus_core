@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.4.0
+
+### Changes
+
+The major change here is support for Telemetry.Metrics v0.5 which includes some breaking
+changes.
+
+  * BREAKING: Distribution buckets must now be passed in `reporter_options`
+  * BREAKING: Unit validations have been removed
+  * Support for event filtering in Metrics v0.5
+
+### Fixes
+
+  * A few typespecs were updated.
+
 ## v0.3.1
 
 ### Fixes
