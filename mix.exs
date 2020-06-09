@@ -1,7 +1,7 @@
 defmodule TelemetryMetricsPrometheus.Core.MixProject do
   use Mix.Project
 
-  @version "0.3.1"
+  @version "0.4.0"
 
   def project do
     [
@@ -26,11 +26,11 @@ defmodule TelemetryMetricsPrometheus.Core.MixProject do
 
   defp deps do
     [
+      {:telemetry_metrics, "~> 0.5"},
+      {:telemetry, "~> 0.4"},
       {:dialyxir, "~> 1.0.0-rc.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.21", only: [:dev, :docs]},
-      {:excoveralls, "~> 0.11.2", only: :test, runtime: false},
-      {:telemetry, "~> 0.4"},
-      {:telemetry_metrics, "~> 0.4"}
+      {:excoveralls, "~> 0.11.2", only: :test, runtime: false}
     ]
   end
 
