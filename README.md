@@ -41,7 +41,7 @@ See the documentation on [Hexdocs](https://hexdocs.pm/telemetry_metrics_promethe
 
 Contributors are highly welcome! 
 
-Additional documentation and tests, TLS support, and benchmarking are all needed. 
+Additional documentation, tests, and benchmarking are all welcome. 
 
 Please open an issue for discussion before undertaking anything non-trivial before
 jumping in and submitting a PR.
