@@ -80,10 +80,12 @@ defmodule TelemetryMetricsPrometheus.Core do
 
       Metrics.distribution(
         "http.request.duration.seconds",
-        buckets: [0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1],
         event_name: [:http, :request, :complete],
         measurement: :duration,
-        unit: {:native, :second}
+        unit: {:native, :second},
+        reporter_options: [
+          buckets: [0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1]
+        ]
       )
 
   The exporter sanitizes names to Prometheus' requirements ([Metric Naming](https://prometheus.io/docs/instrumenting/writing_exporters/#naming)) and joins the event name parts with an underscore.
