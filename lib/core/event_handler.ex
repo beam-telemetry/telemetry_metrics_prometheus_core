@@ -58,6 +58,8 @@ defmodule TelemetryMetricsPrometheus.Core.EventHandler do
     )
   end
 
+  def handle_event_error({:measurement_parse_error, nil}, _config), do: :ok
+
   def handle_event_error({:measurement_parse_error, term}, config) do
     Logger.debug(
       "Expected measurement to be a number, got: #{inspect(term)}. metric_name:=#{
