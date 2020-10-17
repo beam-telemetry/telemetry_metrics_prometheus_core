@@ -28,16 +28,22 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     name = opts[:name]
     aggregates_table_id = create_table(name, :set)
     dist_table_id = create_table(String.to_atom("#{name}_dist"), :duplicate_bag)
+    start_async = Keyword.get(opts, :start_async, true)
 
     Process.flag(:trap_exit, true)
 
-    send(self(), {:setup, opts})
+    state = %{
+      config: %{aggregates_table_id: aggregates_table_id, dist_table_id: dist_table_id},
+      metrics: []
+    }
 
-    {:ok,
-     %{
-       config: %{aggregates_table_id: aggregates_table_id, dist_table_id: dist_table_id},
-       metrics: []
-     }}
+    if start_async do
+      {:ok, state, {:continue, {:setup, opts}}}
+    else
+      registered = setup_registry(opts, state.config)
+
+      {:ok, %{state | metrics: registered}}
+    end
   end
 
   @spec register(Metrics.t(), atom()) ::
@@ -108,15 +114,10 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   end
 
   @impl true
-  def handle_info({:setup, opts}, state) do
-    metrics = Keyword.get(opts, :metrics, [])
-    registered = register_metrics(metrics, state.config)
+  def handle_continue({:setup, opts}, state) do
+    registered = setup_registry(opts, state.config)
 
     {:noreply, %{state | metrics: registered}}
-  end
-
-  def handle_info(_, state) do
-    {:noreply, state}
   end
 
   def handle_call(:get_config, _from, state) do
@@ -145,6 +146,12 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
          true <- :ets.delete(config.aggregates_table_id),
          true <- :ets.delete(config.dist_table_id),
          do: :ok
+  end
+
+  defp setup_registry(opts, config) do
+    opts
+    |> Keyword.get(:metrics, [])
+    |> register_metrics(config)
   end
 
   @spec create_table(name :: atom, type :: atom) :: :ets.tid() | atom
