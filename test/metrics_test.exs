@@ -162,6 +162,36 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
       assert elem(t3, 1) == 28
       cleanup(tid)
     end
+
+    test "records a times series for each tag kv pair and uses measurement from metadata", %{
+      tid: tid
+    } do
+      metric =
+        Metrics.sum("cache.invalidation.memory_total",
+          description: "Total cache invalidation memory freed",
+          measurement: fn _measurements, metadata ->
+            metadata.cache_size
+          end,
+          unit: :kilobyte,
+          tags: [:name]
+        )
+
+      {:ok, _handler_id} = Sum.register(metric, tid, self())
+
+      :telemetry.execute([:cache, :invalidation], %{count: 23}, %{name: "users", cache_size: 1024})
+
+      :telemetry.execute([:cache, :invalidation], %{count: 3}, %{name: "clients", cache_size: 512})
+
+      :telemetry.execute([:cache, :invalidation], %{count: 5}, %{name: "users", cache_size: 256})
+
+      [t1] = :ets.lookup(tid, {metric.name, %{name: "users"}})
+      [t2] = :ets.lookup(tid, {metric.name, %{name: "clients"}})
+
+      assert elem(t1, 1) == 1280
+      assert elem(t2, 1) == 512
+
+      cleanup(tid)
+    end
   end
 
   describe "histogram" do
@@ -203,6 +233,59 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
 
       handlers = :telemetry.list_handlers([])
       assert Enum.any?(handlers, &match?(^handler_id, &1.id))
+      cleanup(tid)
+    end
+
+    test "records a times series for each tag kv pair using a measurement from the metadata", %{
+      dist_tid: tid
+    } do
+      buckets = [
+        256,
+        512,
+        1024,
+        2048,
+        4096
+      ]
+
+      metric =
+        Metrics.distribution("some.plug.call.resp_payload_size",
+          buckets: buckets,
+          description: "Plug call response payload size",
+          event_name: [:some, :plug, :call, :stop],
+          measurement: fn _measurements, metadata ->
+            metadata.conn.resp_size
+          end,
+          unit: :kilobyte,
+          tags: [:method],
+          tag_values: fn %{conn: conn} ->
+            %{
+              method: conn.method
+            }
+          end
+        )
+
+      {:ok, _handler_id} = Distribution.register(metric, tid, self())
+
+      :telemetry.execute([:some, :plug, :call, :stop], %{duration: 5.6e7}, %{
+        conn: %{method: "GET", path_info: ["users", "123"], resp_size: 180}
+      })
+
+      :telemetry.execute([:some, :plug, :call, :stop], %{duration: 1.1e8}, %{
+        conn: %{method: "POST", path_info: ["products", "238"], resp_size: 4_000}
+      })
+
+      :telemetry.execute([:some, :plug, :call, :stop], %{duration: 8.7e7}, %{
+        conn: %{method: "GET", path_info: ["users", "123"], resp_size: 2_000}
+      })
+
+      # , %{method: "GET", path_root: "users"}}
+      key_1 = metric.name
+      samples = :ets.lookup(tid, key_1)
+
+      assert length(samples) == 3
+
+      assert hd(samples) == {[:some, :plug, :call, :resp_payload_size], {%{method: "GET"}, 180}}
+
       cleanup(tid)
     end
 

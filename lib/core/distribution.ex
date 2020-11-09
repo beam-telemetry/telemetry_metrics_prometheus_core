@@ -67,7 +67,8 @@ defmodule TelemetryMetricsPrometheus.Core.Distribution do
         ) :: :ok
   def handle_event(_event, measurements, metadata, config) do
     with true <- EventHandler.keep?(config.keep, metadata),
-         {:ok, measurement} <- EventHandler.get_measurement(measurements, config.measurement),
+         {:ok, measurement} <-
+           EventHandler.get_measurement(measurements, metadata, config.measurement),
          mapped_values <- config.tag_values_fun.(metadata),
          :ok <- EventHandler.validate_tags_in_tag_values(config.tags, mapped_values),
          labels <- Map.take(mapped_values, config.tags) do
