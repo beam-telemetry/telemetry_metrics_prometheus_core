@@ -32,7 +32,7 @@ defmodule TelemetryMetricsPrometheus.Core do
     * Counter - Counter
     * Distribution - Histogram
     * LastValue - Gauge
-    * Sum - Counter
+    * Sum - Counter/Gauge
     * Summary - Summary (Not supported)
 
   ### Units

@@ -24,7 +24,15 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
   end
 
   def format(%Sum{} = metric, time_series) do
-    format_standard({metric, time_series}, "counter")
+    type =
+      metric.reporter_options
+      |> Keyword.get(
+        :preometheus_type,
+        TelemetryMetricsPrometheus.Core.Sum.default_prometheus_type()
+      )
+      |> Atom.to_string()
+
+    format_standard({metric, time_series}, type)
   end
 
   def format(%Distribution{} = metric, time_series) do

@@ -97,6 +97,29 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
           "expected buckets to be a non-empty list or a {range, step} tuple, got #{inspect(term)}"
   end
 
+  @spec validate_prometheus_type!(Metrics.t()) :: :ok | no_return()
+  def validate_prometheus_type!(%Metrics.Sum{reporter_options: reporter_options})
+      when is_list(reporter_options) do
+    case Keyword.get(reporter_options, :prometheus_type) do
+      nil ->
+        :ok
+
+      :gauge ->
+        :ok
+
+      :counter ->
+        :ok
+
+      prometheus_type ->
+        raise ArgumentError,
+              "expected prometheus_type to be one of :gauge or :counter, got #{
+                inspect(prometheus_type)
+              }"
+    end
+  end
+
+  def validate_prometheus_type!(_metric), do: :ok
+
   @spec config(name()) :: %{aggregates_table_id: atom(), dist_table_id: atom()}
   def config(name) do
     GenServer.call(name, :get_config)
@@ -205,6 +228,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
 
   defp register_metric(%Metrics.Distribution{} = metric, config) do
     validate_distribution_buckets!(metric)
+    validate_prometheus_type!(metric)
 
     case Distribution.register(metric, config.dist_table_id, self()) do
       {:ok, handler_id} ->
