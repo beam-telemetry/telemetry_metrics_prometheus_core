@@ -220,6 +220,8 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   end
 
   defp register_metric(%Metrics.Sum{} = metric, config) do
+    validate_prometheus_type!(metric)
+
     case Sum.register(metric, config.aggregates_table_id, self()) do
       {:ok, handler_id} -> {:ok, {metric, handler_id}}
       {:error, :already_exists} -> {:error, :already_exists, metric.name}
@@ -228,7 +230,6 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
 
   defp register_metric(%Metrics.Distribution{} = metric, config) do
     validate_distribution_buckets!(metric)
-    validate_prometheus_type!(metric)
 
     case Distribution.register(metric, config.dist_table_id, self()) do
       {:ok, handler_id} ->
