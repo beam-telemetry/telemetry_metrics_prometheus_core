@@ -100,7 +100,7 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
     end
   end
 
-  test "validates for preometheus_type" do
+  test "validates for prometheus_type" do
     assert_raise ArgumentError, fn ->
       Metrics.sum("some.plug.call.total", reporter_options: [prometheus_type: :invalid])
       |> Registry.validate_prometheus_type!()
