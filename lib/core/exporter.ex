@@ -27,7 +27,7 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
     type =
       metric.reporter_options
       |> Keyword.get(
-        :preometheus_type,
+        :prometheus_type,
         TelemetryMetricsPrometheus.Core.Sum.default_prometheus_type()
       )
       |> Atom.to_string()
