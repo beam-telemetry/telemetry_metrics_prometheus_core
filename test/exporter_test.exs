@@ -163,7 +163,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
         Metrics.sum("cache.key.invalidations.total",
           tags: ["name"],
           description: "The total number of cache key invalidations.",
-          reporter_options: [preometheus_type: :gauge]
+          reporter_options: [prometheus_type: :gauge]
         )
 
       time_series = [
