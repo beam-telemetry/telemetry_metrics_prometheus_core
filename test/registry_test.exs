@@ -106,7 +106,7 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
       |> Registry.validate_prometheus_type!()
     end
 
-    assert Metrics.sum("som.plug.call.total", reporter_options: [preometheus_type: :counter])
+    assert Metrics.sum("some.plug.call.total", reporter_options: [prometheus_type: :counter])
            |> Registry.validate_prometheus_type!() == :ok
 
     assert Metrics.sum("some.plug.call.total", reporter_options: [prometheus_type: :gauge])
