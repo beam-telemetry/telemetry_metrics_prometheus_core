@@ -103,7 +103,8 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
   defp format_name(name) do
     name
     |> Enum.join("_")
-    |> String.replace(~r/[^a-zA-Z_][^a-zA-Z0-9_]*/, "")
+    |> String.replace(~r/[^a-zA-Z0-9_]/, "")
+    |> String.replace(~r/^[^a-zA-Z]+/, "")
   end
 
   defp escape(value) do
