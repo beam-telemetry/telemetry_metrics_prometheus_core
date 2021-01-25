@@ -151,6 +151,31 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       assert result == expected
     end
 
+    test "sum with specified type" do
+      expected = """
+      # HELP cache_key_invalidations_total The total number of cache key invalidations.
+      # TYPE cache_key_invalidations_total gauge
+      cache_key_invalidations_total{name="users"} 1027
+      cache_key_invalidations_total{name="short_urls"} 3\
+      """
+
+      metric =
+        Metrics.sum("cache.key.invalidations.total",
+          tags: ["name"],
+          description: "The total number of cache key invalidations.",
+          reporter_options: [prometheus_type: :gauge]
+        )
+
+      time_series = [
+        {{[:cache, :key, :invalidations, :total], %{"name" => "users"}}, 1027},
+        {{[:cache, :key, :invalidations, :total], %{"name" => "short_urls"}}, 3}
+      ]
+
+      result = Exporter.format(metric, time_series)
+
+      assert result == expected
+    end
+
     test "sum with tags" do
       expected = """
       # HELP cache_key_invalidations_total The total number of cache key invalidations.

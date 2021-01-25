@@ -20,6 +20,7 @@ defmodule TelemetryMetricsPrometheus.Core.Sum do
 
   def register(metric, table_id, owner) do
     handler_id = EventHandler.handler_id(metric.name, owner)
+    type = Keyword.get(metric.reporter_options, :prometheus_type, default_prometheus_type())
 
     with :ok <-
            :telemetry.attach(
@@ -34,7 +35,7 @@ defmodule TelemetryMetricsPrometheus.Core.Sum do
                table: table_id,
                tags: metric.tags,
                tag_values_fun: metric.tag_values,
-               type: :sum
+               type: type
              }
            ) do
       {:ok, handler_id}
@@ -65,4 +66,7 @@ defmodule TelemetryMetricsPrometheus.Core.Sum do
       error -> EventHandler.handle_event_error(error, config)
     end
   end
+
+  @spec default_prometheus_type() :: :counter
+  def default_prometheus_type(), do: :counter
 end

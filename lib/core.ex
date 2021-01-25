@@ -12,6 +12,7 @@ defmodule TelemetryMetricsPrometheus.Core do
             metrics: [
               counter("http.request.count"),
               sum("http.request.payload_size", unit: :byte),
+              sum("websocket.connection.count", reporter_options: [prometheus_type: :gauge]),
               last_value("vm.memory.total", unit: :byte)
             ]
           ]}
@@ -32,7 +33,7 @@ defmodule TelemetryMetricsPrometheus.Core do
     * Counter - Counter
     * Distribution - Histogram
     * LastValue - Gauge
-    * Sum - Counter
+    * Sum - Counter/Gauge
     * Summary - Summary (Not supported)
 
   ### Units
@@ -101,6 +102,38 @@ defmodule TelemetryMetricsPrometheus.Core do
 
   It is recommended, but not required, to abide by Prometheus' best practices regarding labels -
   [Label Best Practices](https://prometheus.io/docs/practices/naming/#labels)
+
+  ### Reporter Options
+
+  In some cases you may want to configure the aspects of a metric definition's
+  underlying Prometheus metric, such as the bucket boundaries for a
+  distribution. This can be achieved by passing `:reporter_options` to the
+  metric definition.
+
+  The supported `:reporter_options` are:
+
+  - `:buckets` - a list of bucket boundaries for distributions. This reporter
+  option is mandatory for `distributions`. Example:
+
+  Example:
+
+      Metrics.distribution(
+        "http.request.duration.seconds",
+        event_name: [:http, :request, :complete],
+        measurement: :duration,
+        unit: {:native, :second},
+        reporter_options: [
+          buckets: [0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1]
+        ]
+      )
+
+  - `:prometheus_type` - the Prometheus type that should be used for a sum,
+  either `:counter` or `:gauge`.  Prometheus counters are monotonic, so a gauge
+  should be used when a sum can increase and decrease. Defaults to `:counter`.
+
+  Example:
+
+      Metrics.sum("websocket.connection.count", reporter_options: [prometheus_type: :gauge])
 
   ### Missing or Invalid Measurements and Tags
 

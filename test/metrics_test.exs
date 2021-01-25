@@ -115,6 +115,31 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
       assert elem(t3, 1) == 210_000
       cleanup(tid)
     end
+
+    test "records a time series for sum/2 that are specified as gauges", %{tid: tid} do
+      metric =
+        Metrics.sum("vm.memory.total",
+          description: "BEAM VM memory",
+          unit: :bytes,
+          reporter_options: [prometheus_type: :gauge]
+        )
+
+      {:ok, _handler_id} = Sum.register(metric, tid, self())
+
+      :telemetry.execute([:vm, :memory], %{total: 200_000}, %{})
+      [t1] = :ets.lookup(tid, {metric.name, %{}})
+
+      :telemetry.execute([:vm, :memory], %{total: -190_000}, %{})
+      [t2] = :ets.lookup(tid, {metric.name, %{}})
+
+      :telemetry.execute([:vm, :memory], %{total: -10_000}, %{})
+      [t3] = :ets.lookup(tid, {metric.name, %{}})
+
+      assert elem(t1, 1) == 200_000
+      assert elem(t2, 1) == 10_000
+      assert elem(t3, 1) == 0
+      cleanup(tid)
+    end
   end
 
   describe "sum" do
