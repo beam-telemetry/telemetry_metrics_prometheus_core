@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.0
+
+### Changes
+
+  * Marking stable!
+
 ## v0.4.2
 
 ### Fixes

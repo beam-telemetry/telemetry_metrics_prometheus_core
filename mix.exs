@@ -1,7 +1,7 @@
 defmodule TelemetryMetricsPrometheus.Core.MixProject do
   use Mix.Project
 
-  @version "0.4.2"
+  @version "1.0.0"
 
   def project do
     [
