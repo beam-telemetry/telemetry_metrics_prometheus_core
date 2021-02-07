@@ -27,7 +27,7 @@ jobs:
       - run: mix format --check-formatted
   tests:
     runs-on: ${{ matrix.os }}
-    name: Test on Elixir ${{ matrix.elixir_version }} (OTP ${{ matrix.otp_version }}) and ${{ matrix.os }}
+    name: Test on Elixir ${{ matrix.elixir }} (OTP ${{ matrix.otp_version }}) and ${{ matrix.os }}
     strategy:
       matrix:
         otp_version: ['21.3', '23.2']
@@ -63,7 +63,7 @@ jobs:
 
   dialyze:
     runs-on: ${{ matrix.os }}
-    name: Dialyze on Elixir ${{ matrix.elixir_version }} (OTP ${{ matrix.otp_version }}) and ${{ matrix.os }}
+    name: Dialyze on Elixir ${{ matrix.elixir }} (OTP ${{ matrix.otp_version }}) and ${{ matrix.os }}
     strategy:
       matrix:
         otp_version: ['21.3', '23.2']
