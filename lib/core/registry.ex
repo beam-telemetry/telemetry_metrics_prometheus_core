@@ -38,7 +38,9 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     }
 
     if start_async do
-      {:ok, state, {:continue, {:setup, opts}}}
+      send(self(), {:setup, opts})
+
+      {:ok, state}
     else
       registered = setup_registry(opts, state.config)
 
@@ -114,7 +116,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   end
 
   @impl true
-  def handle_continue({:setup, opts}, state) do
+  def handle_info({:setup, opts}, state) do
     registered = setup_registry(opts, state.config)
 
     {:noreply, %{state | metrics: registered}}
