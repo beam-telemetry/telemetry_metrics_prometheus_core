@@ -55,7 +55,7 @@ defmodule CoreTest do
     assert metrics_scrape =~ "http_request_total"
   end
 
-  test "initializes properly when configured via start_async" do
+  test "initializes properly when started synchronously" do
     metrics = [
       Metrics.counter("http.request.total",
         event_name: [:http, :request, :stop],
@@ -64,69 +64,24 @@ defmodule CoreTest do
       )
     ]
 
-    async_opts = [
-      name: :test_reporter_async,
-      validations: [require_seconds: false],
-      start_async: true,
-      metrics: metrics
+    opts = [
+      name: :test_reporter,
+      start_async: false
     ]
 
-    sync_opts = [
-      name: :test_reporter_sync,
-      validations: [require_seconds: false],
-      start_async: false,
-      metrics: metrics
-    ]
+    :ok = init_and_wait(metrics, opts)
 
-    async_pid =
-      start_supervised!(%{
-        id: Keyword.get(async_opts, :name),
-        start:
-          {GenServer, :start_link,
-           [
-             Core.Registry,
-             async_opts,
-             [name: Keyword.get(async_opts, :name), debug: [:statistics]]
-           ]}
-      })
-
-    sync_pid =
-      start_supervised!(%{
-        id: Keyword.get(sync_opts, :name),
-        start:
-          {GenServer, :start_link,
-           [
-             Core.Registry,
-             sync_opts,
-             [name: Keyword.get(sync_opts, :name), debug: [:statistics]]
-           ]}
-      })
-
-    Process.sleep(100)
-
-    assert :ets.info(:test_reporter_async) != :undefined
-    assert :ets.info(:test_reporter_async_dist) != :undefined
-
-    assert :ets.info(:test_reporter_sync) != :undefined
-    assert :ets.info(:test_reporter_sync_dist) != :undefined
+    assert :ets.info(:test_reporter) != :undefined
+    assert :ets.info(:test_reporter_dist) != :undefined
 
     :telemetry.execute([:http, :request, :stop], %{duration: 300_000_000}, %{
       method: "get",
       code: 200
     })
 
-    async_metrics_scrape = Core.scrape(Keyword.get(async_opts, :name))
-    sync_metrics_scrape = Core.scrape(Keyword.get(sync_opts, :name))
+    metrics_scrape = Core.scrape(:test_reporter)
 
-    {:ok, async_stats} = :sys.statistics(async_pid, :get)
-    {:ok, sync_stats} = :sys.statistics(sync_pid, :get)
-
-    # The async Registry should have 1 more message processed from the inbox
-    # due to the handle_info setup call triggered in init
-    assert Keyword.get(async_stats, :messages_in) > Keyword.get(sync_stats, :messages_in)
-
-    assert async_metrics_scrape =~ "http_request_total"
-    assert sync_metrics_scrape =~ "http_request_total"
+    assert metrics_scrape =~ "http_request_total"
   end
 
   test "initializes properly via start_link" do
