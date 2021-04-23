@@ -164,7 +164,7 @@ defmodule TelemetryMetricsPrometheus.Core do
     {TelemetryMetricsPrometheus.Core, options}
   ]
 
-  See `start_child/1` for options.
+  See `start_link/1` for options.
   """
   @spec child_spec(prometheus_options()) :: Supervisor.child_spec()
   def child_spec(options) do
@@ -191,6 +191,12 @@ defmodule TelemetryMetricsPrometheus.Core do
   Available options:
   * `:name` - name of the reporter instance. Defaults to `:prometheus_metrics`
   * `:metrics` - a list of metrics to track.
+  * `:start_async - used to configure how the `TelemetryMetricsPrometheus.Core.Supervisor`
+    GenServer starts. When set to false, all of the metrics defined in `:metrics` are
+    initialized in the GenServer's `init/1` callback effectively blocking the supervision
+    tree from proceeding until all Telemetry event handlers are initialized. This is
+    useful if subsequent supervision tree children emit events on start up and you don't
+    want to miss those events due to an async start. Defaults to `true`.
   """
   @spec start_link(prometheus_options()) :: GenServer.on_start()
   def start_link(options) do

@@ -55,6 +55,35 @@ defmodule CoreTest do
     assert metrics_scrape =~ "http_request_total"
   end
 
+  test "initializes properly when started synchronously" do
+    metrics = [
+      Metrics.counter("http.request.total",
+        event_name: [:http, :request, :stop],
+        tags: [:method, :code],
+        description: "The total number of HTTP requests."
+      )
+    ]
+
+    opts = [
+      name: :test_reporter,
+      start_async: false
+    ]
+
+    :ok = init_and_wait(metrics, opts)
+
+    assert :ets.info(:test_reporter) != :undefined
+    assert :ets.info(:test_reporter_dist) != :undefined
+
+    :telemetry.execute([:http, :request, :stop], %{duration: 300_000_000}, %{
+      method: "get",
+      code: 200
+    })
+
+    metrics_scrape = Core.scrape(:test_reporter)
+
+    assert metrics_scrape =~ "http_request_total"
+  end
+
   test "initializes properly via start_link" do
     metrics = [
       Metrics.counter("http.request.total",
