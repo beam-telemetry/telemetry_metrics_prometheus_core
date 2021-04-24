@@ -1,6 +1,6 @@
 # TelemetryMetricsPrometheus.Core
 
-[![CircleCI](https://circleci.com/gh/beam-telemetry/telemetry_metrics_prometheus_core/tree/master.svg?style=svg)](https://circleci.com/gh/beam-telemetry/telemetry_metrics_prometheus_core/tree/master) [![codecov](https://codecov.io/gh/beam-telemetry/telemetry_metrics_prometheus_core/branch/master/graph/badge.svg?token=ZukGAUDLwH)](https://codecov.io/gh/beam-telemetry/telemetry_metrics_prometheus_core) [![Hex](https://img.shields.io/hexpm/v/telemetry_metrics_prometheus_core.svg)](https://hex.pm/packages/telemetry_metrics_prometheus_core) [![Hexdocs](https://img.shields.io/badge/hex-docs-blue.svg?style=flat)](https://hexdocs.pm/telemetry_metrics_prometheus_core/overview.html)
+[![CircleCI](https://circleci.com/gh/beam-telemetry/telemetry_metrics_prometheus_core/tree/master.svg?style=svg)](https://circleci.com/gh/beam-telemetry/telemetry_metrics_prometheus_core/tree/master) [![codecov](https://codecov.io/gh/beam-telemetry/telemetry_metrics_prometheus_core/branch/master/graph/badge.svg?token=ZukGAUDLwH)](https://codecov.io/gh/beam-telemetry/telemetry_metrics_prometheus_core) [![Hex](https://img.shields.io/hexpm/v/telemetry_metrics_prometheus_core.svg)](https://hex.pm/packages/telemetry_metrics_prometheus_core) [![Hexdocs](https://img.shields.io/badge/hex-docs-blue.svg?style=flat)](https://hexdocs.pm/telemetry_metrics_prometheus_core/)
 
 TelemetryMetricsPrometheus.Core is a [Telemetry.Metrics Reporter](https://hexdocs.pm/telemetry_metrics/overview.html#reporters) for aggregating and exposing [Prometheus](https://prometheus.io) metrics based on `Telemetry.Metrics` definitions. This package does not provide a built-in web server. TelemetryMetricsPrometheus provides a server out of the box exposing a `/metrics` endpoint, making setup a breeze.
 
@@ -29,7 +29,7 @@ list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:telemetry_metrics_prometheus_core, "~> 0.4"}
+    {:telemetry_metrics_prometheus_core, "~> 1.0.0"}
   ]
 end
 ```

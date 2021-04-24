@@ -20,6 +20,7 @@ defmodule TelemetryMetricsPrometheus.Core.Sum do
 
   def register(metric, table_id, owner) do
     handler_id = EventHandler.handler_id(metric.name, owner)
+    type = Keyword.get(metric.reporter_options, :prometheus_type, default_prometheus_type())
 
     with :ok <-
            :telemetry.attach(
@@ -34,7 +35,7 @@ defmodule TelemetryMetricsPrometheus.Core.Sum do
                table: table_id,
                tags: metric.tags,
                tag_values_fun: metric.tag_values,
-               type: :sum
+               type: type
              }
            ) do
       {:ok, handler_id}
@@ -52,7 +53,8 @@ defmodule TelemetryMetricsPrometheus.Core.Sum do
         ) :: :ok
   def handle_event(_event, measurements, metadata, config) do
     with true <- EventHandler.keep?(config.keep, metadata),
-         {:ok, measurement} <- EventHandler.get_measurement(measurements, config.measurement),
+         {:ok, measurement} <-
+           EventHandler.get_measurement(measurements, metadata, config.measurement),
          mapped_values <- config.tag_values_fun.(metadata),
          :ok <- EventHandler.validate_tags_in_tag_values(config.tags, mapped_values) do
       labels = Map.take(mapped_values, config.tags)
@@ -64,4 +66,7 @@ defmodule TelemetryMetricsPrometheus.Core.Sum do
       error -> EventHandler.handle_event_error(error, config)
     end
   end
+
+  @spec default_prometheus_type() :: :counter
+  def default_prometheus_type(), do: :counter
 end

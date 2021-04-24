@@ -100,6 +100,25 @@ defmodule TelemetryMetricsPrometheus.Core.RegistryTest do
     end
   end
 
+  test "validates for prometheus_type" do
+    assert_raise ArgumentError, fn ->
+      Metrics.sum("some.plug.call.total", reporter_options: [prometheus_type: :invalid])
+      |> Registry.validate_prometheus_type!()
+    end
+
+    assert Metrics.sum("some.plug.call.total", reporter_options: [prometheus_type: :counter])
+           |> Registry.validate_prometheus_type!() == :ok
+
+    assert Metrics.sum("some.plug.call.total", reporter_options: [prometheus_type: :gauge])
+           |> Registry.validate_prometheus_type!() == :ok
+
+    assert Metrics.sum("some.plug.call.total", reporter_options: [])
+           |> Registry.validate_prometheus_type!() == :ok
+
+    assert Metrics.sum("some.plug.call.total")
+           |> Registry.validate_prometheus_type!() == :ok
+  end
+
   test "retrieves the config", %{opts: opts} do
     {:ok, _pid} = start_supervised({Registry, opts})
     config = Registry.config(:test)

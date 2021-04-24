@@ -151,6 +151,31 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       assert result == expected
     end
 
+    test "sum with specified type" do
+      expected = """
+      # HELP cache_key_invalidations_total The total number of cache key invalidations.
+      # TYPE cache_key_invalidations_total gauge
+      cache_key_invalidations_total{name="users"} 1027
+      cache_key_invalidations_total{name="short_urls"} 3\
+      """
+
+      metric =
+        Metrics.sum("cache.key.invalidations.total",
+          tags: ["name"],
+          description: "The total number of cache key invalidations.",
+          reporter_options: [prometheus_type: :gauge]
+        )
+
+      time_series = [
+        {{[:cache, :key, :invalidations, :total], %{"name" => "users"}}, 1027},
+        {{[:cache, :key, :invalidations, :total], %{"name" => "short_urls"}}, 3}
+      ]
+
+      result = Exporter.format(metric, time_series)
+
+      assert result == expected
+    end
+
     test "sum with tags" do
       expected = """
       # HELP cache_key_invalidations_total The total number of cache key invalidations.
@@ -278,6 +303,42 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       ]
 
       result = Exporter.format(metric, [{{metric.name, %{}}, {buckets, 144_320, 53423}}])
+
+      assert result == expected
+    end
+
+    test "allow names with digits" do
+      expected = """
+      # HELP foo123_bar_total FOO123 BAR total
+      # TYPE foo123_bar_total counter
+      foo123_bar_total 1027\
+      """
+
+      metric = Metrics.counter("foo123.bar.total", description: "FOO123 BAR total")
+
+      time_series = [
+        {{[:foo123, :bar, :total], %{}}, 1027}
+      ]
+
+      result = Exporter.format(metric, time_series)
+
+      assert result == expected
+    end
+
+    test "strip leading digits from names" do
+      expected = """
+      # HELP foo_bar_total 123FOO BAR total
+      # TYPE foo_bar_total counter
+      foo_bar_total 1027\
+      """
+
+      metric = Metrics.counter("123foo.bar.total", description: "123FOO BAR total")
+
+      time_series = [
+        {{[:"123foo", :bar, :total], %{}}, 1027}
+      ]
+
+      result = Exporter.format(metric, time_series)
 
       assert result == expected
     end

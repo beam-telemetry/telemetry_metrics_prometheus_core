@@ -3,6 +3,11 @@ defmodule TelemetryMetricsPrometheus.Core.EventHandler do
 
   alias Telemetry.Metrics
   alias TelemetryMetricsPrometheus.Core.{Counter, Distribution, LastValue, Sum}
+
+  @typep measurement ::
+           atom()
+           | (:telemetry.event_measurements() -> number())
+           | (:telemetry.event_measurements(), :telemetry.event_metadata() -> number())
   @typep measurement_not_found_error :: {:measurement_not_found, atom()}
   @typep measurement_parse_error :: {:measurement_parse_error, term}
   @typep tags_missing_error :: {:tags_missing, [atom()]}
@@ -32,17 +37,30 @@ defmodule TelemetryMetricsPrometheus.Core.EventHandler do
     end
   end
 
-  @spec get_measurement(:telemetry.event_measurements(), atom()) ::
+  @spec get_measurement(
+          measurements :: :telemetry.event_measurements(),
+          metadata :: :telemetry.event_metadata(),
+          measurement()
+        ) ::
           {:ok, number()} | measurement_not_found_error() | measurement_parse_error()
-  def get_measurement(measurements, measurement) when is_atom(measurement) do
+  def get_measurement(measurements, _metadata, measurement) when is_atom(measurement) do
     case Map.get(measurements, measurement) do
       nil -> {:measurement_not_found, measurement}
       value -> parse_measurement(value)
     end
   end
 
-  def get_measurement(measurements, measurement_fun) do
-    measurement_fun.(measurements)
+  def get_measurement(measurements, _metadata, measurement_fun)
+      when is_function(measurement_fun, 1) do
+    measurements
+    |> measurement_fun.()
+    |> parse_measurement()
+  end
+
+  def get_measurement(measurements, metadata, measurement_fun)
+      when is_function(measurement_fun, 2) do
+    measurements
+    |> measurement_fun.(metadata)
     |> parse_measurement()
   end
 

@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.0.0
+
+### Changes
+
+  * Marking stable!
+
+## v0.4.2
+
+### Fixes
+
+  * Allow numbers in exported metric names per spec
+
+## v0.4.1
+
+### Changes
+
+  * Support Telemetry.Metrics v0.6
+
 ## v0.4.0
 
 ### Changes

@@ -24,7 +24,15 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
   end
 
   def format(%Sum{} = metric, time_series) do
-    format_standard({metric, time_series}, "counter")
+    type =
+      metric.reporter_options
+      |> Keyword.get(
+        :prometheus_type,
+        TelemetryMetricsPrometheus.Core.Sum.default_prometheus_type()
+      )
+      |> Atom.to_string()
+
+    format_standard({metric, time_series}, type)
   end
 
   def format(%Distribution{} = metric, time_series) do
@@ -95,7 +103,8 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
   defp format_name(name) do
     name
     |> Enum.join("_")
-    |> String.replace(~r/[^a-zA-Z_][^a-zA-Z0-9_]*/, "")
+    |> String.replace(~r/[^a-zA-Z0-9_]/, "")
+    |> String.replace(~r/^[^a-zA-Z]+/, "")
   end
 
   defp escape(value) do
