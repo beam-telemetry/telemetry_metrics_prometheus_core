@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.1
+
+### Changes
+
+  * Added a synchronous start option
+
 ## v1.0.0
 
 ### Changes
