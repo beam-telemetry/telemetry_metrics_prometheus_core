@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.2
+
+### Changes
+
+  * Allow telemetry 1.0.0
+
 ## v1.0.1
 
 ### Changes
