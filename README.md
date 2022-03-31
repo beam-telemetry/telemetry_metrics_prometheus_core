@@ -6,7 +6,7 @@ TelemetryMetricsPrometheus.Core is a [Telemetry.Metrics Reporter](https://hexdoc
 
 ## Web Server
 
- This library is the core for the [TelemetryMetricsPrometheus](https://github.com/beam-telemetry/telemetry_metrics_prometheus) project. The `TelemetryMetricsPrometheus` libary is a standalone implementation leveraging `TelemetryMetricsPrometheus.Core` which ships with its own web server. Using `TelemetryMetricsPrometheus` allows a quick way to get started with a Cowboy web server that runs along side your application. `TelemetryMetricsPrometheus.Core` should be used if your use case is outside the scope of the `TelemetryMetricsPrometheus` web server.
+ This library is the core for the [TelemetryMetricsPrometheus](https://github.com/beam-telemetry/telemetry_metrics_prometheus) project. The `TelemetryMetricsPrometheus` library is a standalone implementation leveraging `TelemetryMetricsPrometheus.Core` which ships with its own web server. Using `TelemetryMetricsPrometheus` allows a quick way to get started with a Cowboy web server that runs along side your application. `TelemetryMetricsPrometheus.Core` should be used if your use case is outside the scope of the `TelemetryMetricsPrometheus` web server.
 
 ## Is this the right Prometheus package for me?
 
