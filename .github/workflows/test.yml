@@ -30,8 +30,8 @@ jobs:
     name: Test on Elixir ${{ matrix.elixir }} (OTP ${{ matrix.otp_version }}) and ${{ matrix.os }}
     strategy:
       matrix:
-        otp_version: ['21.3', '23.2', '24.2']
-        elixir: ['1.11.3', '1.12.3', '1.13.1']
+        otp-version: ['22.3', '23.2', '24.2']
+        elixir-version: ['1.11.4', '1.12.3', '1.13.1']
         os: [ubuntu-latest]
     env:
       OTP_VERSION: ${{ matrix.otp_version }}
@@ -66,8 +66,8 @@ jobs:
     name: Dialyze on Elixir ${{ matrix.elixir }} (OTP ${{ matrix.otp_version }}) and ${{ matrix.os }}
     strategy:
       matrix:
-        otp_version: ['21.3', '23.2', '24.2']
-        elixir: ['1.11.3', '1.12.3', '1.13.1']
+        otp-version: ['22.3', '23.2', '24.2']
+        elixir-version: ['1.11.4', '1.12.3', '1.13.1']
         os: [ubuntu-latest]
     env:
       OTP_VERSION: ${{ matrix.otp_version }}
