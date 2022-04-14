@@ -30,15 +30,15 @@ jobs:
     name: Test on Elixir ${{ matrix.elixir }} (OTP ${{ matrix.otp_version }}) and ${{ matrix.os }}
     strategy:
       matrix:
-        otp_version: ['21.3', '23.2']
-        elixir: ['1.9.4', '1.11.3']
+        otp_version: ['22.3', '23.2', '24.2']
+        elixir: ['1.11.4', '1.12.3', '1.13.1']
         os: [ubuntu-latest]
     env:
       OTP_VERSION: ${{ matrix.otp_version }}
       ELIXIR_VERSION: ${{ matrix.elixir }}
     steps:
       - uses: actions/checkout@v2
-      - uses: erlef/setup-elixir@v1
+      - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{ matrix.otp_version }}
           elixir-version: ${{ matrix.elixir }}
@@ -66,15 +66,15 @@ jobs:
     name: Dialyze on Elixir ${{ matrix.elixir }} (OTP ${{ matrix.otp_version }}) and ${{ matrix.os }}
     strategy:
       matrix:
-        otp_version: ['21.3', '23.2']
-        elixir: ['1.9.4', '1.11.3']
+        otp_version: ['22.3', '23.2', '24.2']
+        elixir: ['1.11.4', '1.12.3', '1.13.1']
         os: [ubuntu-latest]
     env:
       OTP_VERSION: ${{ matrix.otp_version }}
       ELIXIR_VERSION: ${{ matrix.elixir }}
     steps:
       - uses: actions/checkout@v2
-      - uses: erlef/setup-elixir@v1
+      - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{ matrix.otp_version }}
           elixir-version: ${{ matrix.elixir }}
