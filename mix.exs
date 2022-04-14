@@ -1,13 +1,13 @@
 defmodule TelemetryMetricsPrometheus.Core.MixProject do
   use Mix.Project
 
-  @version "1.0.2"
+  @version "1.1.0"
 
   def project do
     [
       app: :telemetry_metrics_prometheus_core,
       version: @version,
-      elixir: "~> 1.7",
+      elixir: "~> 1.10",
       preferred_cli_env: preferred_cli_env(),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -28,9 +28,9 @@ defmodule TelemetryMetricsPrometheus.Core.MixProject do
     [
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry, "~> 0.4 or ~> 1.0"},
-      {:dialyxir, "~> 1.0.0", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.23", only: [:dev, :docs]},
-      {:excoveralls, "~> 0.13.4", only: :test, runtime: false}
+      {:dialyxir, "~> 1.1", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.28", only: [:dev, :docs]},
+      {:excoveralls, "~> 0.14", only: :test, runtime: false}
     ]
   end
 
@@ -61,7 +61,7 @@ defmodule TelemetryMetricsPrometheus.Core.MixProject do
   defp package do
     [
       maintainers: ["Bryan Naegele"],
-      licenses: ["Apache 2.0"],
+      licenses: ["Apache-2.0"],
       links: %{"GitHub" => "https://github.com/beam-telemetry/telemetry_metrics_prometheus_core"}
     ]
   end
