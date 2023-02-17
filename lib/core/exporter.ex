@@ -54,19 +54,33 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
     has_labels = map_size(labels) > 0
 
     samples =
-      Enum.map_join(buckets, "\n", fn {upper_bound, count} ->
+      Enum.map_join(buckets, "\n", fn {upper_bound, count, exemplar} ->
+        exemplar_text =
+          case exemplar do
+            nil ->
+              ""
+
+            {value, exemplar_labels, monotonic_sample_time} ->
+              time =
+                System.convert_time_unit(
+                  monotonic_sample_time + System.time_offset(),
+                  :native,
+                  :millisecond
+                ) / 1000
+
+              " # {#{format_labels(exemplar_labels)}} #{value} #{time}"
+          end
+
         if has_labels do
           ~s(#{name}_bucket{#{format_labels(labels)},le="#{upper_bound}"} #{count})
         else
           ~s(#{name}_bucket{le="#{upper_bound}"} #{count})
-        end
+        end <> exemplar_text
       end)
 
     summary =
       if has_labels do
-        "#{name}_sum{#{format_labels(labels)}} #{sum}\n#{name}_count{#{format_labels(labels)}} #{
-          count
-        }"
+        "#{name}_sum{#{format_labels(labels)}} #{sum}\n#{name}_count{#{format_labels(labels)}} #{count}"
       else
         "#{name}_sum #{sum}\n#{name}_count #{count}"
       end

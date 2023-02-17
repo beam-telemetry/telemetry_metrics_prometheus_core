@@ -37,6 +37,15 @@ defmodule TelemetryMetricsPrometheus.Core.EventHandler do
     end
   end
 
+  @spec validate_tags_in_exemplar_tag_values(Telemetry.Metrics.tags(), map()) ::
+          :ok | tags_missing_error()
+  def validate_tags_in_exemplar_tag_values(tags, tag_values) do
+    case Enum.reject(tags, &match?(%{^&1 => _}, tag_values)) do
+      [] -> :ok
+      missing_tags -> {:exemplar_tags_missing, missing_tags}
+    end
+  end
+
   @spec get_measurement(
           measurements :: :telemetry.event_measurements(),
           metadata :: :telemetry.event_metadata(),
@@ -80,17 +89,19 @@ defmodule TelemetryMetricsPrometheus.Core.EventHandler do
 
   def handle_event_error({:measurement_parse_error, term}, config) do
     Logger.debug(
-      "Expected measurement to be a number, got: #{inspect(term)}. metric_name:=#{
-        inspect(config.name)
-      }"
+      "Expected measurement to be a number, got: #{inspect(term)}. metric_name:=#{inspect(config.name)}"
     )
   end
 
   def handle_event_error({:tags_missing, tags}, config) do
     Logger.debug(
-      "Tags missing from tag_values. metric_name:=#{inspect(config.name)} tags:=#{
-        inspect(Enum.join(tags))
-      }"
+      "Tags missing from tag_values. metric_name:=#{inspect(config.name)} tags:=#{inspect(Enum.join(tags))}"
+    )
+  end
+
+  def handle_event_error({:exemplar_tags_missing, tags}, config) do
+    Logger.debug(
+      "Tags missing from exemplar_tag_values. metric_name:=#{inspect(config.name)} exemplar_tags:=#{inspect(Enum.join(tags))}"
     )
   end
 end
