@@ -220,6 +220,18 @@ defmodule TelemetryMetricsPrometheus.Core do
     |> Exporter.export(metrics)
   end
 
+  @doc """
+  Forces distributions (histogram) aggregaion for the given reporter
+  name - defaults to `:prometheus_metrics`.
+  """
+  @spec aggregate(name :: atom()) :: :ok
+  def aggregate(name \\ :prometheus_metrics) do
+    config = Registry.config(name)
+    metrics = Registry.metrics(name)
+
+    :ok = Aggregator.aggregate(metrics, config.aggregates_table_id, config.dist_table_id)
+  end
+
   @spec ensure_options(prometheus_options()) :: prometheus_options()
   defp ensure_options(options) do
     Keyword.merge(default_options(), options)
