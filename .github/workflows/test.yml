@@ -34,7 +34,6 @@ jobs:
           version-type: strict
           otp-version: ${{ matrix.otp_version }}
           elixir-version: ${{ matrix.elixir_version }}
-          rebar3-version: ${{ matrix.rebar3_version }}
       - name: Cache
         uses: actions/cache@v3
         with:
@@ -76,7 +75,6 @@ jobs:
           version-type: strict
           otp-version: ${{ matrix.otp_version }}
           elixir-version: ${{ matrix.elixir_version }}
-          rebar3-version: ${{ matrix.rebar3_version }}
       - name: Cache
         uses: actions/cache@v3
         with:
