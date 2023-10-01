@@ -120,9 +120,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
 
       prometheus_type ->
         raise ArgumentError,
-              "expected prometheus_type to be one of :gauge or :counter, got #{
-                inspect(prometheus_type)
-              }"
+              "expected prometheus_type to be one of :gauge or :counter, got #{inspect(prometheus_type)}"
     end
   end
 
@@ -201,9 +199,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
 
         {:error, :unsupported_metric_type, metric_type} ->
           Logger.warn(
-            "Metric type #{metric_type} is unsupported. Dropping measure. metric_name:=#{
-              inspect(metric.name)
-            }"
+            "Metric type #{metric_type} is unsupported. Dropping measure. metric_name:=#{inspect(metric.name)}"
           )
 
           acc

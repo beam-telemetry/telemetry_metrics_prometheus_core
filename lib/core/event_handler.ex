@@ -80,17 +80,13 @@ defmodule TelemetryMetricsPrometheus.Core.EventHandler do
 
   def handle_event_error({:measurement_parse_error, term}, config) do
     Logger.debug(
-      "Expected measurement to be a number, got: #{inspect(term)}. metric_name:=#{
-        inspect(config.name)
-      }"
+      "Expected measurement to be a number, got: #{inspect(term)}. metric_name:=#{inspect(config.name)}"
     )
   end
 
   def handle_event_error({:tags_missing, tags}, config) do
     Logger.debug(
-      "Tags missing from tag_values. metric_name:=#{inspect(config.name)} tags:=#{
-        inspect(Enum.join(tags))
-      }"
+      "Tags missing from tag_values. metric_name:=#{inspect(config.name)} tags:=#{inspect(Enum.join(tags))}"
     )
   end
 end

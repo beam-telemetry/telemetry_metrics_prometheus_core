@@ -56,9 +56,7 @@ defmodule TelemetryMetricsPrometheus.Core.Aggregator do
       case String.Chars.impl_for(value) do
         nil ->
           Logger.warn(
-            "Dropping aggregation for bad tag value. metric:=#{inspect(elem(key, 0))} tag: #{
-              inspect(label_key)
-            }"
+            "Dropping aggregation for bad tag value. metric:=#{inspect(elem(key, 0))} tag: #{inspect(label_key)}"
           )
 
           delete_aggregation(table_id, key)
