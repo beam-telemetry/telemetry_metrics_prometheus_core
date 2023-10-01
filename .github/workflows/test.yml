@@ -41,6 +41,9 @@ jobs:
             ~/deps
             ~/_build
           key: ${{ runner.os }}-lint-${{ matrix.otp_version }}-${{ matrix.elixir_version }}-${{ hashFiles('**/mix.lock') }}
+      - name: Fetch deps
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: mix deps.get
       - name: Compile project
         run: mix compile --warnings-as-errors
 
