@@ -9,85 +9,86 @@ on:
       - 'main'
 
 jobs:
-  format:
+  test-matrix:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: erlef/setup-elixir@v1
-        with:
-          otp-version: '23.2'
-          elixir-version: '1.11.3'
-      - uses: actions/cache@v2
-        name: Cache
-        with:
-          path: |
-            deps
-          key: v2-${{ hashFiles('mix.lock') }}
-      - run: mix deps.get
-      - run: mix format --check-formatted
-  tests:
-    runs-on: ${{ matrix.os }}
-    name: Test on Elixir ${{ matrix.elixir }} (OTP ${{ matrix.otp_version }}) and ${{ matrix.os }}
+      - uses: actions/checkout@v3
+      - name: Read file
+        id: set-matrix
+        run: |
+          matrixStringifiedObject="$(jq -c . .github/elixir-test-matrix.json)"
+          echo "matrix=$matrixStringifiedObject" >> $GITHUB_OUTPUT
+  lint:
+    needs: [test-matrix]
+    name: Lint on Elixir ${{ matrix.elixir_version }} (OTP ${{ matrix.otp_version }})
     strategy:
-      matrix:
-        otp_version: ['21.3', '23.2']
-        elixir: ['1.9.4', '1.11.3']
-        os: [ubuntu-latest]
-    env:
-      OTP_VERSION: ${{ matrix.otp_version }}
-      ELIXIR_VERSION: ${{ matrix.elixir }}
+      fail-fast: false
+      matrix: ${{ fromJson(needs.test-matrix.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: erlef/setup-elixir@v1
+      - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
         with:
+          version-type: strict
           otp-version: ${{ matrix.otp_version }}
-          elixir-version: ${{ matrix.elixir }}
-      - uses: actions/cache@v2
-        name: Cache
+          elixir-version: ${{ matrix.elixir_version }}
+          rebar3-version: ${{ matrix.rebar3_version }}
+      - name: Cache
+        uses: actions/cache@v3
         with:
           path: |
-            deps
-            _build
-          key: ${{ runner.os }}-build-${{ matrix.otp_version }}-${{ matrix.elixir }}-v2-${{ hashFiles(format('{0}{1}', github.workspace, 'mix.lock')) }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ matrix.otp_version }}-${{ matrix.elixir }}-
-      - run: mix deps.get
-        name: Deps
-      - run: mix test --cover
-        name: ExUnit
-      - uses: codecov/codecov-action@v1
-        if: ${{ always() }}
-        with:
-          file: coverage.xml
-          env_vars: OTP_VERSION,ELIXIR_VERSION
+            ~/deps
+            ~/_build
+          key: ${{ runner.os }}-lint-${{ matrix.otp_version }}-${{ matrix.elixir_version }}-${{ hashFiles('**/mix.lock') }}
+      - name: Compile project
+        run: mix compile --warnings-as-errors
 
-  dialyze:
-    runs-on: ${{ matrix.os }}
-    name: Dialyze on Elixir ${{ matrix.elixir }} (OTP ${{ matrix.otp_version }}) and ${{ matrix.os }}
-    strategy:
-      matrix:
-        otp_version: ['21.3', '23.2']
-        elixir: ['1.9.4', '1.11.3']
-        os: [ubuntu-latest]
-    env:
-      OTP_VERSION: ${{ matrix.otp_version }}
-      ELIXIR_VERSION: ${{ matrix.elixir }}
-    steps:
-      - uses: actions/checkout@v2
-      - uses: erlef/setup-elixir@v1
-        with:
-          otp-version: ${{ matrix.otp_version }}
-          elixir-version: ${{ matrix.elixir }}
-      - uses: actions/cache@v2
-        name: Cache
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: PLTs cache
+        uses: actions/cache@v3
+        id: plt-cache
         with:
           path: |
-            deps
-            _build
-          key: ${{ runner.os }}-dialyzer-${{ matrix.otp_version }}-${{ matrix.elixir }}-v2-${{ hashFiles('mix.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ matrix.otp_version }}-${{ matrix.elixir }}-
-      - run: mix deps.get
-        name: Deps
-      - run: mix dialyzer
-        name: Dialyzer
+             ~/plts
+          key: ${{ runner.os }}-${{ runner.arch }}-plts-${{ matrix.otp-version }}-${{ matrix.elixir-version }}-${{ hashFiles('**/mix.lock') }}
+      - name: Create PLTs
+        if: steps.plt-cache.outputs.cache-hit != 'true'
+        run: mix dialyzer --plt
+
+      - name: Dialyze
+        run: mix dialyzer --no-check
+
+  test:
+    needs: [test-matrix]
+    name: Test on Elixir ${{ matrix.elixir_version }} (OTP ${{ matrix.otp_version }})
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.test-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
+        with:
+          version-type: strict
+          otp-version: ${{ matrix.otp_version }}
+          elixir-version: ${{ matrix.elixir_version }}
+          rebar3-version: ${{ matrix.rebar3_version }}
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/deps
+            ~/_build
+          key: ${{ runner.os }}-test-${{ matrix.otp_version }}-${{ matrix.elixir_version }}-${{ hashFiles('**/mix.lock') }}
+      - name: Fetch deps
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: mix deps.get
+      - name: Compile project
+        run: mix compile --warnings-as-errors
+      - name: Check formatting
+        run: mix format --check-formatted
+        if: matrix.check_formatted
+      - name: Test
+        run: mix test
