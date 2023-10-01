@@ -49,6 +49,8 @@ jobs:
 
       - name: Check formatting
         run: mix format --check-formatted
+      - name: Create plts folder
+        run: mkdir plts
 
       - name: PLTs cache
         uses: actions/cache@v3
