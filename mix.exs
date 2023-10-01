@@ -14,6 +14,11 @@ defmodule TelemetryMetricsPrometheus.Core.MixProject do
       docs: docs(),
       description: description(),
       package: package(),
+      dialyzer: [
+        plt_add_apps: [:ex_unit, :mix],
+        plt_core_path: "plts",
+        plt_local_path: "plts"
+      ],
       test_coverage: [tool: ExCoveralls]
     ]
   end
