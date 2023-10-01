@@ -23,6 +23,7 @@ jobs:
   lint:
     needs: [test-matrix]
     name: Lint on Elixir ${{ matrix.elixir_version }} (OTP ${{ matrix.otp_version }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.test-matrix.outputs.matrix) }}
@@ -64,6 +65,7 @@ jobs:
   test:
     needs: [test-matrix]
     name: Test on Elixir ${{ matrix.elixir_version }} (OTP ${{ matrix.otp_version }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.test-matrix.outputs.matrix) }}
