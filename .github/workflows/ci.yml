@@ -46,8 +46,8 @@ jobs:
         run: mix deps.get
       - name: Compile project
         run: mix compile --warnings-as-errors
-
       - name: Check formatting
+        if: matrix.check_formatted
         run: mix format --check-formatted
       - name: Create plts folder
         run: mkdir plts
