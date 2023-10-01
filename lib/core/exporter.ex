@@ -64,9 +64,7 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
 
     summary =
       if has_labels do
-        "#{name}_sum{#{format_labels(labels)}} #{sum}\n#{name}_count{#{format_labels(labels)}} #{
-          count
-        }"
+        "#{name}_sum{#{format_labels(labels)}} #{sum}\n#{name}_count{#{format_labels(labels)}} #{count}"
       else
         "#{name}_sum #{sum}\n#{name}_count #{count}"
       end
