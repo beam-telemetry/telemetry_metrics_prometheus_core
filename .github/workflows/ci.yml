@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  test-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Read file
+        id: set-matrix
+        run: |
+          matrixStringifiedObject="$(jq -c . .github/elixir-test-matrix.json)"
+          echo "matrix=$matrixStringifiedObject" >> $GITHUB_OUTPUT
+  lint:
+    needs: [test-matrix]
+    name: Lint on Elixir ${{ matrix.elixir_version }} (OTP ${{ matrix.otp_version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.test-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
+        with:
+          version-type: strict
+          otp-version: ${{ matrix.otp_version }}
+          elixir-version: ${{ matrix.elixir_version }}
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/deps
+            ~/_build
+          key: ${{ runner.os }}-lint-${{ matrix.otp_version }}-${{ matrix.elixir_version }}-${{ hashFiles('**/mix.lock') }}
+      - name: Fetch deps
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: mix deps.get
+      - name: Compile project
+        run: mix compile --warnings-as-errors
+      - name: Check formatting
+        if: matrix.check_formatted
+        run: mix format --check-formatted
+      - name: Create plts folder
+        run: mkdir plts
+
+      - name: PLTs cache
+        uses: actions/cache@v3
+        id: plt-cache
+        with:
+          path: |
+             ~/plts
+          key: ${{ runner.os }}-${{ runner.arch }}-plts-${{ matrix.otp-version }}-${{ matrix.elixir-version }}-${{ hashFiles('**/mix.lock') }}
+      - name: Create PLTs
+        if: steps.plt-cache.outputs.cache-hit != 'true'
+        run: mix dialyzer --plt
+
+      - name: Dialyze
+        run: mix dialyzer --no-check
+
+  test:
+    needs: [test-matrix]
+    name: Test on Elixir ${{ matrix.elixir_version }} (OTP ${{ matrix.otp_version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.test-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
+        with:
+          version-type: strict
+          otp-version: ${{ matrix.otp_version }}
+          elixir-version: ${{ matrix.elixir_version }}
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/deps
+            ~/_build
+          key: ${{ runner.os }}-test-${{ matrix.otp_version }}-${{ matrix.elixir_version }}-${{ hashFiles('**/mix.lock') }}
+      - name: Fetch deps
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: mix deps.get
+      - name: Compile project
+        run: mix compile --warnings-as-errors
+      - name: Check formatting
+        run: mix format --check-formatted
+        if: matrix.check_formatted
+      - name: Test
+        run: mix test
