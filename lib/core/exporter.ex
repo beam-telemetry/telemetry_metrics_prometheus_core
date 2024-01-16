@@ -109,14 +109,14 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
     value
     |> to_string()
     |> String.replace(~S("), ~S(\"))
-    |> String.replace(~S(\\), ~S(\\\\))
+    |> String.replace("\\\\", "\\\\\\\\")
     |> String.replace(~S(\n), ~S(\\n))
   end
 
   defp escape_help(value) do
     value
     |> to_string()
-    |> String.replace(~S(\\), ~S(\\\\))
+    |> String.replace("\\\\", "\\\\\\\\")
     |> String.replace(~S(\n), ~S(\\n))
   end
 end
