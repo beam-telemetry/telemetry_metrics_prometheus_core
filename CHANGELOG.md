@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.2.0
+
+### Changes
+
+  * Minimum supported Elixir version increased to 1.12
+
+### Fixes
+
+  * Support Elixir v1.15
+  * Removed unused dependencies
+
+## v1.1.0
+
+### Fixes
+
+  * Relaxed telemetry version requirement
+
 ## v1.0.2
 
 ### Changes

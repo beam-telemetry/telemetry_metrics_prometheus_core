@@ -191,7 +191,7 @@ defmodule TelemetryMetricsPrometheus.Core do
   Available options:
   * `:name` - name of the reporter instance. Defaults to `:prometheus_metrics`
   * `:metrics` - a list of metrics to track.
-  * `:start_async - used to configure how the `TelemetryMetricsPrometheus.Core.Supervisor`
+  * `:start_async` - used to configure how the `TelemetryMetricsPrometheus.Core.Supervisor`
     GenServer starts. When set to false, all of the metrics defined in `:metrics` are
     initialized in the GenServer's `init/1` callback effectively blocking the supervision
     tree from proceeding until all Telemetry event handlers are initialized. This is
