@@ -9,3 +9,4 @@ erl_crash.dump
 /config/*.secret.exs
 # Ignore package tarball (built via "mix hex.build").
 telemetry_metrics_prometheus_core-*.tar
+plts
