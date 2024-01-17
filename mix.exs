@@ -1,13 +1,13 @@
 defmodule TelemetryMetricsPrometheus.Core.MixProject do
   use Mix.Project
 
-  @version "1.1.0"
+  @version "1.2.0"
 
   def project do
     [
       app: :telemetry_metrics_prometheus_core,
       version: @version,
-      elixir: "~> 1.11",
+      elixir: "~> 1.12",
       preferred_cli_env: preferred_cli_env(),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
