@@ -55,7 +55,7 @@ defmodule TelemetryMetricsPrometheus.Core.Aggregator do
     |> Enum.map(fn {label_key, value} ->
       case String.Chars.impl_for(value) do
         nil ->
-          Logger.warn(
+          Logger.warning(
             "Dropping aggregation for bad tag value. metric:=#{inspect(elem(key, 0))} tag: #{inspect(label_key)}"
           )
 

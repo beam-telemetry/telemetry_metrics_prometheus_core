@@ -191,14 +191,14 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
           [metric | acc]
 
         {:error, :already_exists, metric_name} ->
-          Logger.warn(
+          Logger.warning(
             "Metric name already exists. Dropping measure. metric_name:=#{inspect(metric_name)}"
           )
 
           acc
 
         {:error, :unsupported_metric_type, metric_type} ->
-          Logger.warn(
+          Logger.warning(
             "Metric type #{metric_type} is unsupported. Dropping measure. metric_name:=#{inspect(metric.name)}"
           )
 
