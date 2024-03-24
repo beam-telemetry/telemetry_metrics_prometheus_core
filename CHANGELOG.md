@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.1
+
+### Changes
+
+  * Support TelemetryMetrics v1.0
+
 ## v1.2.0
 
 ### Changes
