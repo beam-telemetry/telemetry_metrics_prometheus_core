@@ -252,12 +252,12 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
         )
 
       buckets = [
-        {"0.05", 24054},
-        {"0.1", 33444},
-        {"0.2", 100_392},
-        {"0.5", 129_389},
-        {"1", 133_988},
-        {"+Inf", 144_320}
+        {"0.05", 24054, nil},
+        {"0.1", 33444, nil},
+        {"0.2", 100_392, nil},
+        {"0.5", 129_389, nil},
+        {"1", 133_988, nil},
+        {"+Inf", 144_320, nil}
       ]
 
       result =
@@ -294,12 +294,53 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
         )
 
       buckets = [
-        {"0.05", 24054},
-        {"0.1", 33444},
-        {"0.2", 100_392},
-        {"0.5", 129_389},
-        {"1", 133_988},
-        {"+Inf", 144_320}
+        {"0.05", 24054, nil},
+        {"0.1", 33444, nil},
+        {"0.2", 100_392, nil},
+        {"0.5", 129_389, nil},
+        {"1", 133_988, nil},
+        {"+Inf", 144_320, nil}
+      ]
+
+      result = Exporter.format(metric, [{{metric.name, %{}}, {buckets, 144_320, 53423}}])
+
+      assert result == expected
+    end
+
+    test "distribution with exemplar" do
+      fake_trace_id = inspect(make_ref())
+      time = System.monotonic_time()
+
+      time_text =
+        System.convert_time_unit(time + System.time_offset(), :native, :millisecond) / 1000
+
+      expected = """
+      # HELP http_request_duration_seconds A histogram of the request duration.
+      # TYPE http_request_duration_seconds histogram
+      http_request_duration_seconds_bucket{le="0.05"} 24054
+      http_request_duration_seconds_bucket{le="0.1"} 33444
+      http_request_duration_seconds_bucket{le="0.2"} 100392 # {trace_id="#{fake_trace_id}"} 0.15 #{time_text}
+      http_request_duration_seconds_bucket{le="0.5"} 129389
+      http_request_duration_seconds_bucket{le="1"} 133988
+      http_request_duration_seconds_bucket{le="+Inf"} 144320
+      http_request_duration_seconds_sum 53423
+      http_request_duration_seconds_count 144320\
+      """
+
+      metric =
+        Metrics.distribution("http.request.duration.seconds",
+          buckets: [0.05, 0.1, 0.2, 0.5, 1],
+          description: "A histogram of the request duration.",
+          unit: {:native, :second}
+        )
+
+      buckets = [
+        {"0.05", 24054, nil},
+        {"0.1", 33444, nil},
+        {"0.2", 100_392, {0.15, %{trace_id: fake_trace_id}, time}},
+        {"0.5", 129_389, nil},
+        {"1", 133_988, nil},
+        {"+Inf", 144_320, nil}
       ]
 
       result = Exporter.format(metric, [{{metric.name, %{}}, {buckets, 144_320, 53423}}])

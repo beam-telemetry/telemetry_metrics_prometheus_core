@@ -135,6 +135,9 @@ defmodule TelemetryMetricsPrometheus.Core do
 
       Metrics.sum("websocket.connection.count", reporter_options: [prometheus_type: :gauge])
 
+  - `:exemplar_tags` - a subset of metadata keys by which aggregations will be broken down. Defaults to an empty list.
+  - `:exemplar_tag_values` - a function that receives the metadata and returns a map with the tags as keys and their respective values. Defaults to returning the metadata itself.
+
   ### Missing or Invalid Measurements and Tags
 
   If a measurement value is missing or non-numeric, the error is logged at the `debug` level

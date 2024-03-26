@@ -25,6 +25,8 @@ defmodule TelemetryMetricsPrometheus.Core.Distribution do
           table: atom(),
           tags: Metrics.tags(),
           tag_values_fun: Metrics.tag_values(),
+          exemplar_tags: Metrics.tags(),
+          exemplar_tag_values_fun: Metrics.tag_values(),
           type: :histogram,
           unit: Metrics.unit()
         }
@@ -48,6 +50,9 @@ defmodule TelemetryMetricsPrometheus.Core.Distribution do
                table: table_id,
                tags: metric.tags,
                tag_values_fun: metric.tag_values,
+               exemplar_tags: Keyword.get(metric.reporter_options, :exemplar_tags, []),
+               exemplar_tag_values_fun:
+                 Keyword.get(metric.reporter_options, :exemplar_tag_values, &Function.identity/1),
                type: :histogram,
                unit: metric.unit
              }
@@ -71,8 +76,19 @@ defmodule TelemetryMetricsPrometheus.Core.Distribution do
            EventHandler.get_measurement(measurements, metadata, config.measurement),
          mapped_values <- config.tag_values_fun.(metadata),
          :ok <- EventHandler.validate_tags_in_tag_values(config.tags, mapped_values),
-         labels <- Map.take(mapped_values, config.tags) do
-      true = :ets.insert(config.table, {config.name, {labels, measurement}})
+         labels <- Map.take(mapped_values, config.tags),
+         mapped_exemplar_values <- config.exemplar_tag_values_fun.(metadata),
+         :ok <-
+           EventHandler.validate_tags_in_exemplar_tag_values(
+             config.exemplar_tags,
+             mapped_exemplar_values
+           ),
+         exemplar_labels <- Map.take(mapped_exemplar_values, config.exemplar_tags) do
+      true =
+        :ets.insert(
+          config.table,
+          {config.name, {labels, exemplar_labels, System.monotonic_time(), measurement}}
+        )
 
       :ok
     else
