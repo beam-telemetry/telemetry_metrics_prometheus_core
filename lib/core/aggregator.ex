@@ -84,6 +84,10 @@ defmodule TelemetryMetricsPrometheus.Core.Aggregator do
   end
 
   @spec get_aggregation(key :: key(), table :: atom()) :: {} | aggregation()
+  defp get_aggregation(key, table) when is_atom(key) do
+    get_aggregation(to_string(key), table)
+  end
+  
   defp get_aggregation(key, table) do
     case :ets.lookup(table, key) do
       [] -> {}
@@ -93,6 +97,10 @@ defmodule TelemetryMetricsPrometheus.Core.Aggregator do
 
   @spec put_aggregation(aggregation :: nil | aggregation(), key :: key(), table :: atom()) :: true
   def put_aggregation(nil, _, _), do: true
+
+  def put_aggregation(aggregation, key, tid) when is_atom(key) do
+    put_aggregation(aggregation, to_string(key), tid)
+  end
 
   def put_aggregation(aggregation, key, tid) do
     :ets.insert(tid, {key, aggregation})
