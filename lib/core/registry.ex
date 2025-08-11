@@ -84,7 +84,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     buckets
   end
 
-  def validate_distribution_buckets!({first..last, step} = buckets) when is_integer(step) do
+  def validate_distribution_buckets!({first..last//_, step} = buckets) when is_integer(step) do
     if first >= last do
       raise ArgumentError, "expected buckets range to be ascending, got #{inspect(buckets)}"
     end
