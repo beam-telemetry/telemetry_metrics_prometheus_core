@@ -39,13 +39,14 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
     name = format_name(metric.name)
     help = "# HELP #{name} #{escape_help(metric.description)}"
     type = "# TYPE #{name} histogram"
+    unit = "# UNIT #{name} #{metric.unit}"
 
     distributions =
       Enum.map_join(time_series, "\n", fn ts ->
         format_distribution(metric, ts)
       end)
 
-    Enum.join([help, type, distributions], "\n")
+    Enum.join([help, type, unit, distributions], "\n")
   end
 
   def format_distribution(metric, {{_, labels}, {buckets, count, sum}}) do
@@ -76,6 +77,7 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
     name = format_name(metric.name)
     help = "# HELP #{name} #{escape_help(metric.description)}"
     type = "# TYPE #{name} #{type}"
+    unit = "# UNIT #{name} #{metric.unit}"
 
     samples =
       Enum.map_join(time_series, "\n", fn {{_, labels}, val} ->
@@ -88,7 +90,7 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
         end
       end)
 
-    Enum.join([help, type, samples], "\n")
+    Enum.join([help, type, unit, samples], "\n")
   end
 
   defp format_labels(labels) do

@@ -8,9 +8,11 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP http_request_total 
       # TYPE http_request_total counter
+      # UNIT http_request_total unit
       http_request_total 1027
       # HELP cache_key_total 
       # TYPE cache_key_total gauge
+      # UNIT cache_key_total unit
       cache_key_total 3
       """
 
@@ -39,6 +41,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP http_request_total The total number of HTTP requests.
       # TYPE http_request_total counter
+      # UNIT http_request_total unit
       http_request_total{code="200",method="post"} 1027
       http_request_total{code="400",method="post"} 3\
       """
@@ -63,6 +66,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP http_request_total The total number of HTTP requests.
       # TYPE http_request_total counter
+      # UNIT http_request_total unit
       http_request_total 1027\
       """
 
@@ -85,6 +89,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
         ~S(# HELP db_query_total The total number of DB queries. \\\\ \\n) <>
           "\n" <>
           "# TYPE db_query_total counter\n" <>
+          "# UNIT db_query_total unit\n" <>
           ~S(db_query_total{query="SELECT a0.\"id\" FROM \"users\" AS a0 WHERE LIMIT $1"} 1027) <>
           "\n" <>
           ~S(db_query_total{query="\\n \\\\ \""} 4242)
@@ -110,6 +115,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP cache_keys_total The total number of cache keys.
       # TYPE cache_keys_total gauge
+      # UNIT cache_keys_total unit
       cache_keys_total{name="users"} 1027
       cache_keys_total{name="short_urls"} 3\
       """
@@ -134,6 +140,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP cache_key_total The total number of cache keys.
       # TYPE cache_key_total gauge
+      # UNIT cache_key_total unit
       cache_key_total 1027\
       """
 
@@ -155,6 +162,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP cache_key_invalidations_total The total number of cache key invalidations.
       # TYPE cache_key_invalidations_total gauge
+      # UNIT cache_key_invalidations_total unit
       cache_key_invalidations_total{name="users"} 1027
       cache_key_invalidations_total{name="short_urls"} 3\
       """
@@ -180,6 +188,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP cache_key_invalidations_total The total number of cache key invalidations.
       # TYPE cache_key_invalidations_total counter
+      # UNIT cache_key_invalidations_total unit
       cache_key_invalidations_total{name="users"} 1027
       cache_key_invalidations_total{name="short_urls"} 3\
       """
@@ -204,6 +213,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP cache_key_invalidations_total The total number of cache key invalidations.
       # TYPE cache_key_invalidations_total counter
+      # UNIT cache_key_invalidations_total unit
       cache_key_invalidations_total 1027\
       """
 
@@ -225,6 +235,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP http_request_duration_seconds A histogram of the request duration.
       # TYPE http_request_duration_seconds histogram
+      # UNIT http_request_duration_seconds second
       http_request_duration_seconds_bucket{method="GET",le="0.05"} 24054
       http_request_duration_seconds_bucket{method="GET",le="0.1"} 33444
       http_request_duration_seconds_bucket{method="GET",le="0.2"} 100392
@@ -276,6 +287,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP http_request_duration_seconds A histogram of the request duration.
       # TYPE http_request_duration_seconds histogram
+      # UNIT http_request_duration_seconds second
       http_request_duration_seconds_bucket{le="0.05"} 24054
       http_request_duration_seconds_bucket{le="0.1"} 33444
       http_request_duration_seconds_bucket{le="0.2"} 100392
@@ -311,6 +323,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP foo123_bar_total FOO123 BAR total
       # TYPE foo123_bar_total counter
+      # UNIT foo123_bar_total unit
       foo123_bar_total 1027\
       """
 
@@ -329,6 +342,7 @@ defmodule TelemetryMetricsPrometheus.Core.ExporterTest do
       expected = """
       # HELP foo_bar_total 123FOO BAR total
       # TYPE foo_bar_total counter
+      # UNIT foo_bar_total unit
       foo_bar_total 1027\
       """
 
