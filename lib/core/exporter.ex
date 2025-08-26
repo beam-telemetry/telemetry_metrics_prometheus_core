@@ -53,20 +53,24 @@ defmodule TelemetryMetricsPrometheus.Core.Exporter do
 
     has_labels = map_size(labels) > 0
 
+    sample_name = "#{name}_" <> Keyword.get(metric.reporter_options, :bucket_suffix, "bucket")
+    sum_name = "#{name}_" <> Keyword.get(metric.reporter_options, :sum_suffix, "sum")
+    count_name = "#{name}_" <> Keyword.get(metric.reporter_options, :count_suffix, "count")
+
     samples =
       Enum.map_join(buckets, "\n", fn {upper_bound, count} ->
         if has_labels do
-          ~s(#{name}_bucket{#{format_labels(labels)},le="#{upper_bound}"} #{count})
+          ~s(#{sample_name}{#{format_labels(labels)},le="#{upper_bound}"} #{count})
         else
-          ~s(#{name}_bucket{le="#{upper_bound}"} #{count})
+          ~s(#{sample_name}{le="#{upper_bound}"} #{count})
         end
       end)
 
     summary =
       if has_labels do
-        "#{name}_sum{#{format_labels(labels)}} #{sum}\n#{name}_count{#{format_labels(labels)}} #{count}"
+        "#{sum_name}{#{format_labels(labels)}} #{sum}\n#{count_name}{#{format_labels(labels)}} #{count}"
       else
-        "#{name}_sum #{sum}\n#{name}_count #{count}"
+        "#{sum_name} #{sum}\n#{count_name} #{count}"
       end
 
     Enum.join([samples, summary], "\n")
