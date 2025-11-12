@@ -261,6 +261,70 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
       cleanup(tid)
     end
 
+    test "records a times series and exemplar for each tag kv pair using a measurement from the metadata",
+         %{
+           dist_tid: tid
+         } do
+      buckets = [
+        256,
+        512,
+        1024,
+        2048,
+        4096
+      ]
+
+      metric =
+        Metrics.distribution("some.plug.call.resp_payload_size",
+          buckets: buckets,
+          description: "Plug call response payload size",
+          event_name: [:some, :plug, :call, :stop],
+          measurement: fn _measurements, metadata ->
+            metadata.conn.resp_size
+          end,
+          unit: :kilobyte,
+          tags: [:method],
+          tag_values: fn %{conn: conn} ->
+            %{
+              method: conn.method
+            }
+          end,
+          reporter_options: [
+            exemplar_tags: [:trace_id],
+            exemplar_tag_values: fn metadata ->
+              assert Map.has_key?(metadata, :conn)
+              %{trace_id: :erlang.term_to_binary(make_ref())}
+            end
+          ]
+        )
+
+      {:ok, _handler_id} = Distribution.register(metric, tid, self())
+
+      :telemetry.execute([:some, :plug, :call, :stop], %{duration: 5.6e7}, %{
+        conn: %{method: "GET", path_info: ["users", "123"], resp_size: 180}
+      })
+
+      :telemetry.execute([:some, :plug, :call, :stop], %{duration: 1.1e8}, %{
+        conn: %{method: "POST", path_info: ["products", "238"], resp_size: 4_000}
+      })
+
+      :telemetry.execute([:some, :plug, :call, :stop], %{duration: 8.7e7}, %{
+        conn: %{method: "GET", path_info: ["users", "123"], resp_size: 2_000}
+      })
+
+      # , %{method: "GET", path_root: "users"}}
+      key_1 = metric.name
+      samples = :ets.lookup(tid, key_1)
+
+      assert length(samples) == 3
+
+      assert {[:some, :plug, :call, :resp_payload_size],
+              {%{method: "GET"}, %{trace_id: trace_id}, _exemplar_time, 180}} = hd(samples)
+
+      assert is_reference(:erlang.binary_to_term(trace_id))
+
+      cleanup(tid)
+    end
+
     test "records a times series for each tag kv pair using a measurement from the metadata", %{
       dist_tid: tid
     } do
@@ -309,7 +373,8 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
 
       assert length(samples) == 3
 
-      assert hd(samples) == {[:some, :plug, :call, :resp_payload_size], {%{method: "GET"}, 180}}
+      assert {[:some, :plug, :call, :resp_payload_size],
+              {%{method: "GET"}, _exemplar_labels, _exemplar_time, 180}} = hd(samples)
 
       cleanup(tid)
     end
@@ -374,8 +439,9 @@ defmodule TelemetryMetricsPrometheus.Core.MetricsTest do
 
       assert length(samples) == 3
 
-      assert hd(samples) ==
-               {[:some, :plug, :call, :duration], {%{method: "GET", path_root: "users"}, 0.056}}
+      assert {[:some, :plug, :call, :duration],
+              {%{method: "GET", path_root: "users"}, _exemplar_labels, _exemplar_time, 0.056}} =
+               hd(samples)
 
       cleanup(tid)
     end

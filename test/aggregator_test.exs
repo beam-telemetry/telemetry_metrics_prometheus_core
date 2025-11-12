@@ -24,13 +24,17 @@ defmodule TelemetryMetricsPrometheus.Core.AggregatorTest do
   describe "bucket_measurements/2" do
     test "measurements are properly bucketed" do
       [
-        {[1, 2, 3, "+Inf"], [], {[{"1", 0}, {"2", 0}, {"3", 0}, {"+Inf", 0}], 0, 0},
+        {[1, 2, 3, "+Inf"], [],
+         {[{"1", 0, nil}, {"2", 0, nil}, {"3", 0, nil}, {"+Inf", 0, nil}], 0, 0},
          "with no measurements"},
-        {[1, 2, 3, "+Inf"], [0.1], {[{"1", 1}, {"2", 1}, {"3", 1}, {"+Inf", 1}], 1, 0.1},
+        {[1, 2, 3, "+Inf"], [{0.1, %{}, 1}],
+         {[{"1", 1, {0.1, %{}, 1}}, {"2", 1, nil}, {"3", 1, nil}, {"+Inf", 1, nil}], 1, 0.1},
          "with one measurement"},
-        {[1, 2, 3, "+Inf"], [2, 3.1], {[{"1", 0}, {"2", 1}, {"3", 1}, {"+Inf", 2}], 2, 5.1},
-         "compares measurement to bucket limit correctly"},
-        {[1, 2, 3, "+Inf"], [4, 5], {[{"1", 0}, {"2", 0}, {"3", 0}, {"+Inf", 2}], 2, 9},
+        {[1, 2, 3, "+Inf"], [{2, %{}, 1}, {3.1, %{}, 2}],
+         {[{"1", 0, nil}, {"2", 1, {2, %{}, 1}}, {"3", 1, nil}, {"+Inf", 2, {3.1, %{}, 2}}], 2,
+          5.1}, "compares measurement to bucket limit correctly"},
+        {[1, 2, 3, "+Inf"], [{4, %{}, 1}, {5, %{}, 2}],
+         {[{"1", 0, nil}, {"2", 0, nil}, {"3", 0, nil}, {"+Inf", 2, {5, %{}, 2}}], 2, 9},
          "with measurements over the bucket limits"}
       ]
       |> Enum.each(fn {buckets, measurements, expected_buckets, message} ->
@@ -111,9 +115,13 @@ defmodule TelemetryMetricsPrometheus.Core.AggregatorTest do
         conn: %{method: "GET", path_info: ["users", "123"]}
       })
 
+      middle_time = System.monotonic_time()
+
       :telemetry.execute([:some, :plug, :call, :stop], %{duration: 3_000_000_000}, %{
         conn: %{method: "GET", path_info: ["users", "123"]}
       })
+
+      end_time = System.monotonic_time()
 
       :ok = Aggregator.aggregate([metric], tid, dist_tid)
 
@@ -122,17 +130,26 @@ defmodule TelemetryMetricsPrometheus.Core.AggregatorTest do
          {bucketed, count, sum}}
       ] = :ets.tab2list(tid)
 
-      assert bucketed == [{"1", 0}, {"2", 0}, {"3", 2}, {"+Inf", 2}]
+      assert [{"1", 0, nil}, {"2", 0, nil}, {"3", 2, {3.0, %{}, mst}}, {"+Inf", 2, nil}] =
+               bucketed
+
+      assert mst >= middle_time and mst <= end_time
       assert count == 2
       assert sum == 6.0
+
+      beginning_time = System.monotonic_time()
 
       :telemetry.execute([:some, :plug, :call, :stop], %{duration: 1_500_000_000}, %{
         conn: %{method: "GET", path_info: ["users", "123"]}
       })
 
+      middle_time = System.monotonic_time()
+
       :telemetry.execute([:some, :plug, :call, :stop], %{duration: 0_800_000_000}, %{
         conn: %{method: "GET", path_info: ["users", "123"]}
       })
+
+      end_time = System.monotonic_time()
 
       :ok = Aggregator.aggregate([metric], tid, dist_tid)
 
@@ -141,7 +158,16 @@ defmodule TelemetryMetricsPrometheus.Core.AggregatorTest do
          {bucketed_2, count_2, sum_2}}
       ] = :ets.tab2list(tid)
 
-      assert bucketed_2 == [{"1", 1}, {"2", 2}, {"3", 4}, {"+Inf", 4}]
+      assert [
+               {"1", 1, {0.8, %{}, mst1}},
+               {"2", 2, {1.5, %{}, mst2}},
+               {"3", 4, {3.0, %{}, mst3}},
+               {"+Inf", 4, nil}
+             ] = bucketed_2
+
+      assert mst1 >= middle_time and mst1 <= end_time
+      assert mst2 >= beginning_time and mst2 <= middle_time
+      assert mst3 <= beginning_time
       assert count_2 == 4
       assert sum_2 == 8.3
 
