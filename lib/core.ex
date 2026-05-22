@@ -152,6 +152,7 @@ defmodule TelemetryMetricsPrometheus.Core do
   @type prometheus_option ::
           {:metrics, metrics()}
           | {:name, atom()}
+          | {:start_async, boolean()}
 
   @type prometheus_options :: [prometheus_option()]
 
