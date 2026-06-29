@@ -5,7 +5,7 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   require Logger
 
   alias Telemetry.Metrics
-  alias TelemetryMetricsPrometheus.Core.{Counter, Distribution, LastValue, Sum}
+  alias TelemetryMetricsPrometheus.Core.{Aggregator, Counter, Distribution, LastValue, Sum}
 
   @type name :: atom()
   @type metric_exists_error() :: {:error, :already_exists, Metrics.t()}
@@ -32,10 +32,27 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
 
     Process.flag(:trap_exit, true)
 
-    state = %{
-      config: %{aggregates_table_id: aggregates_table_id, dist_table_id: dist_table_id},
-      metrics: []
+    # Distribution (histogram) samples are buffered in the dist table and only folded into
+    # the aggregates table when aggregated. To keep that buffer bounded even when the
+    # `/metrics` endpoint is scraped infrequently (or never), the registry aggregates on its
+    # own: as soon as `flush_threshold` samples have been buffered (tracked lock-free in the
+    # event handlers via `staged`), and at most every `max_flush_interval_ms` as a fallback
+    # for low-volume metrics. `flush_pending` ensures a burst over the threshold enqueues a
+    # single flush rather than one per event. Set either option to `:infinity` to disable it.
+    flush_threshold = normalize_limit(Keyword.get(opts, :flush_threshold, 10_000))
+    max_flush_interval_ms = normalize_limit(Keyword.get(opts, :max_flush_interval_ms, 60_000))
+
+    config = %{
+      aggregates_table_id: aggregates_table_id,
+      dist_table_id: dist_table_id,
+      flush_threshold: flush_threshold,
+      staged: :atomics.new(1, []),
+      flush_pending: :atomics.new(1, [])
     }
+
+    state = %{config: config, metrics: [], max_flush_interval_ms: max_flush_interval_ms}
+
+    schedule_flush_timer(max_flush_interval_ms)
 
     if start_async do
       send(self(), {:setup, opts})
@@ -47,6 +64,13 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
       {:ok, %{state | metrics: registered}}
     end
   end
+
+  defp normalize_limit(:infinity), do: :infinity
+  defp normalize_limit(nil), do: :infinity
+  defp normalize_limit(n) when is_integer(n) and n > 0, do: n
+
+  defp schedule_flush_timer(:infinity), do: :ok
+  defp schedule_flush_timer(interval), do: Process.send_after(self(), :flush_timer, interval)
 
   @spec register(Metrics.t(), atom()) ::
           :ok | metric_exists_error() | unsupported_metric_type_error()
@@ -136,11 +160,36 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
     GenServer.call(name, :get_metrics)
   end
 
+  @doc """
+  Aggregate buffered distribution samples into the aggregates table.
+
+  Runs inside the registry process so it is serialized with the periodic/threshold flushes,
+  making the read-modify-write of the cumulative aggregates table race-free even when several
+  scrapes (or a scrape and a flush) happen concurrently.
+  """
+  @spec aggregate(name()) :: :ok
+  def aggregate(name) do
+    GenServer.call(name, :aggregate)
+  end
+
   @impl true
   def handle_info({:setup, opts}, state) do
     registered = setup_registry(opts, state.config)
 
     {:noreply, %{state | metrics: registered}}
+  end
+
+  # Threshold-triggered flush from the event handlers: drain only, no timer involved.
+  def handle_info(:flush, state) do
+    {:noreply, do_aggregate(state)}
+  end
+
+  # Fallback-interval flush: drain, then re-arm exactly one successor timer so the periodic
+  # chain never multiplies (threshold flushes deliberately do not reschedule).
+  def handle_info(:flush_timer, state) do
+    state = do_aggregate(state)
+    schedule_flush_timer(state.max_flush_interval_ms)
+    {:noreply, state}
   end
 
   def handle_call(:get_config, _from, state) do
@@ -150,6 +199,10 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   def handle_call(:get_metrics, _from, state) do
     metrics = Enum.map(state.metrics, &elem(&1, 0))
     {:reply, metrics, state}
+  end
+
+  def handle_call(:aggregate, _from, state) do
+    {:reply, :ok, do_aggregate(state)}
   end
 
   @impl true
@@ -169,6 +222,18 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
          true <- :ets.delete(config.aggregates_table_id),
          true <- :ets.delete(config.dist_table_id),
          do: :ok
+  end
+
+  # Drains the distribution buffer into the aggregates table and re-arms the flush trigger.
+  # The order matters: aggregate (which `:ets.take`s the buffered samples) first, then reset
+  # the staged counter, then clear `flush_pending` so the next over-threshold event can
+  # enqueue a fresh flush.
+  defp do_aggregate(%{config: config, metrics: metrics} = state) do
+    definitions = Enum.map(metrics, &elem(&1, 0))
+    :ok = Aggregator.aggregate(definitions, config.aggregates_table_id, config.dist_table_id)
+    :atomics.put(config.staged, 1, 0)
+    :atomics.put(config.flush_pending, 1, 0)
+    state
   end
 
   defp setup_registry(opts, config) do
@@ -233,7 +298,14 @@ defmodule TelemetryMetricsPrometheus.Core.Registry do
   defp register_metric(%Metrics.Distribution{} = metric, config) do
     validate_distribution_buckets!(metric)
 
-    case Distribution.register(metric, config.dist_table_id, self()) do
+    flush_ctx = %{
+      registry: self(),
+      staged: config.staged,
+      flush_pending: config.flush_pending,
+      flush_threshold: config.flush_threshold
+    }
+
+    case Distribution.register(metric, config.dist_table_id, self(), flush_ctx) do
       {:ok, handler_id} ->
         reporter_options =
           Keyword.update!(

@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+  * Bound the distribution (histogram) sample buffer so it no longer grows without limit when
+    the `/metrics` endpoint is scraped infrequently or never. The registry now aggregates
+    buffered samples on its own — once `:flush_threshold` samples have accumulated (default
+    `10_000`) and at most every `:max_flush_interval_ms` (default `60_000`) as a fallback —
+    in addition to aggregating on scrape. Set either option to `:infinity` to restore the
+    previous scrape-only behaviour. Fixes
+    [#41](https://github.com/beam-telemetry/telemetry_metrics_prometheus_core/issues/41) and
+    [#52](https://github.com/beam-telemetry/telemetry_metrics_prometheus_core/issues/52).
+
+### Changes
+
+  * Aggregation now runs inside the registry process, serializing it with the automatic
+    flushes and with concurrent scrapes. This removes a pre-existing race in the
+    read-modify-write of the cumulative aggregates table when scrapes overlapped.
+
 ## v1.2.1
 
 ### Changes

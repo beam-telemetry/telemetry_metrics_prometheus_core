@@ -22,10 +22,24 @@ defmodule TelemetryMetricsPrometheus.Core do
         Supervisor.start_link(children, opts)
       end
 
-  Note that aggregations for distributions (histogram) only occur at scrape time.
-  These aggregations only have to process events that have occurred since the last
-  scrape, so it's recommended at this time to keep an eye on scrape durations if
-  you're reporting a large number of distributions or you have a high tag cardinality.
+  Distribution (histogram) samples are buffered as they are observed and folded into their
+  histogram buckets during aggregation. Aggregation happens at scrape time and, to keep the
+  buffer bounded regardless of how often (or whether) you scrape, automatically once
+  `:flush_threshold` samples have been buffered and at most every `:max_flush_interval_ms` as
+  a fallback. Each aggregation only has to process events buffered since the last one, so it's
+  recommended to keep an eye on scrape durations if you're reporting a large number of
+  distributions or you have a high tag cardinality. See `start_link/1` for tuning these
+  options.
+
+  > #### Scrape the endpoint, or rely on the auto-flush {: .warning}
+  >
+  > Before these flush options existed, a reporter whose `/metrics` endpoint was never scraped
+  > would buffer distribution samples forever, growing unbounded (see issues
+  > [#41](https://github.com/beam-telemetry/telemetry_metrics_prometheus_core/issues/41) and
+  > [#52](https://github.com/beam-telemetry/telemetry_metrics_prometheus_core/issues/52)). The
+  > defaults now bound that buffer even when nothing scrapes, but distributions are still only
+  > *exported* on scrape — point a Prometheus-compatible scraper at the endpoint to actually
+  > collect them.
 
   ## Telemetry.Metrics to Prometheus Equivalents
 
@@ -197,6 +211,14 @@ defmodule TelemetryMetricsPrometheus.Core do
     tree from proceeding until all Telemetry event handlers are initialized. This is
     useful if subsequent supervision tree children emit events on start up and you don't
     want to miss those events due to an async start. Defaults to `true`.
+  * `:flush_threshold` - the number of buffered distribution samples that triggers an
+    automatic aggregation, bounding the buffer's memory use independently of scrape frequency.
+    Counted lock-free across all distributions; a burst over the threshold enqueues a single
+    flush. Set to `:infinity` to disable size-based flushing. Defaults to `10_000`.
+  * `:max_flush_interval_ms` - fallback interval, in milliseconds, after which buffered
+    distribution samples are aggregated even if `:flush_threshold` has not been reached. This
+    drains low-volume distributions and keeps the exported histograms fresh. Set to
+    `:infinity` to disable. Defaults to `60_000`.
   """
   @spec start_link(prometheus_options()) :: GenServer.on_start()
   def start_link(options) do
@@ -211,10 +233,13 @@ defmodule TelemetryMetricsPrometheus.Core do
   """
   @spec scrape(name :: atom()) :: String.t()
   def scrape(name \\ :prometheus_metrics) do
+    # Aggregate inside the registry process so the read-modify-write of the cumulative
+    # aggregates table is serialized with the periodic/threshold flushes (and with any other
+    # concurrent scrape). The read-only export below can safely run in the caller.
+    :ok = Registry.aggregate(name)
+
     config = Registry.config(name)
     metrics = Registry.metrics(name)
-
-    :ok = Aggregator.aggregate(metrics, config.aggregates_table_id, config.dist_table_id)
 
     Aggregator.get_time_series(config.aggregates_table_id)
     |> Exporter.export(metrics)
