@@ -145,8 +145,6 @@ defmodule TelemetryMetricsPrometheus.Core do
   alias Telemetry.Metrics
   alias TelemetryMetricsPrometheus.Core.{Aggregator, Exporter, Registry}
 
-  require Logger
-
   @type metrics :: [Metrics.t()]
 
   @type prometheus_option ::
