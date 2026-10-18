@@ -65,7 +65,7 @@ defmodule TelemetryMetricsPrometheus.Core.EventHandler do
   end
 
   # Not sure if we should be handling this. Should reporters be responsible for bad actors?
-  @spec parse_measurement(term) :: {:ok, number()} | no_return()
+  @spec parse_measurement(term) :: {:ok, number()} | measurement_parse_error()
   def parse_measurement(measurement) when is_number(measurement), do: {:ok, measurement}
   def parse_measurement(term), do: {:measurement_parse_error, term}
 
